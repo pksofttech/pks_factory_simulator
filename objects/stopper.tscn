@@ -1,0 +1,91 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/stopper.gd" id="stopper_script"]
+[ext_resource type="PackedScene" path="res://assets/stopper/stopper_visual.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_stand"]
+size = Vector3(0.38, 1.32, 0.34)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gate"]
+size = Vector3(0.08, 0.16, 1.44)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_queue"]
+size = Vector3(0.65, 0.75, 1.25)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_clearance"]
+size = Vector3(1.1, 0.75, 1.25)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_led"]
+resource_local_to_scene = true
+albedo_color = Color(0.94, 0.43, 0.18, 1)
+emission_enabled = true
+emission = Color(0.94, 0.43, 0.18, 1)
+emission_energy_multiplier = 1.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_led"]
+top_radius = 0.03
+bottom_radius = 0.03
+height = 0.015
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_arrow"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_shaft"]
+size = Vector3(0.36, 0.012, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wing"]
+size = Vector3(0.20, 0.012, 0.04)
+
+[node name="Stopper" type="StaticBody3D"]
+script = ExtResource("stopper_script")
+
+[node name="StopperVisual" parent="." instance=ExtResource("blender_visual")]
+
+[node name="StandCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.66, -0.92)
+shape = SubResource("BoxShape3D_stand")
+
+[node name="GateBody" type="AnimatableBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.24, -0.92)
+
+[node name="GateCollision" type="CollisionShape3D" parent="GateBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.74)
+shape = SubResource("BoxShape3D_gate")
+
+[node name="QueueSensor" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 1.35, 0)
+collision_layer = 0
+
+[node name="QueueCollision" type="CollisionShape3D" parent="QueueSensor"]
+shape = SubResource("BoxShape3D_queue")
+
+[node name="ClearanceZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.95, 1.35, 0)
+collision_layer = 0
+
+[node name="ClearanceCollision" type="CollisionShape3D" parent="ClearanceZone"]
+shape = SubResource("BoxShape3D_clearance")
+
+[node name="Indicator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.34, -0.92)
+material_override = SubResource("StandardMaterial3D_led")
+mesh = SubResource("CylinderMesh_led")
+
+[node name="DirectionArrow" type="Node3D" parent="." groups=["belt_direction_arrows"]]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.25, 1.34, -0.92)
+
+[node name="Shaft" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, 0, 0)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_shaft")
+
+[node name="WingL" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0.12, 0, -0.06)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_wing")
+
+[node name="WingR" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0.12, 0, 0.06)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_wing")

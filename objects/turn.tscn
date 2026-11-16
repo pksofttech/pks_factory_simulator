@@ -1,0 +1,150 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://turn_conveyor.gd" id="1_v83om"]
+
+[ext_resource type="PackedScene" path="res://assets/turn/turn_visual.glb" id="blender_visual"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kqn8s"]
+albedo_color = Color(0.3254902, 0.41568628, 0.47058824, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_gey4d"]
+size = Vector3(1.5, 0.25, 1.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rkiau"]
+size = Vector3(1.5, 0.25, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sh13v"]
+albedo_color = Color(0.14901961, 0.20392157, 0.23137255, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_u3vls"]
+size = Vector3(1.42, 0.035, 1.42)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wj7bq"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_l24td"]
+size = Vector3(0.48, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_k2oke"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_xgndw"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vvy2w"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_cg7ol"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_18l6a"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_7dwj5"]
+size = Vector3(0.48, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w54s0"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_jyuup"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_reiw1"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_58jty"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f4ldh"]
+albedo_color = Color(0.5686275, 0.654902, 0.7137255, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_432lo"]
+size = Vector3(0.13, 0.8, 0.13)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f0mlv"]
+albedo_color = Color(0.5686275, 0.654902, 0.7137255, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_ruwrb"]
+size = Vector3(0.13, 0.8, 0.13)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2p324"]
+albedo_color = Color(0.5686275, 0.654902, 0.7137255, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_quktw"]
+size = Vector3(0.13, 0.8, 0.13)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c6jsg"]
+albedo_color = Color(0.5686275, 0.654902, 0.7137255, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_hgsns"]
+size = Vector3(0.13, 0.8, 0.13)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_drvp5"]
+size = Vector3(1.5, 1.1, 1.5)
+
+[node name="Turn" type="StaticBody3D" unique_id=469489895]
+
+[node name="TurnVisual" parent="." instance=ExtResource("blender_visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.93, 0)
+
+[node name="TurnCollision" type="CollisionShape3D" parent="." unique_id=902352075]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_rkiau")
+
+[node name="DirectionArrow" type="Node3D" parent="." unique_id=1895060383 groups=["belt_direction_arrows"]]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.38, 1.1, 0)
+metadata/normal_yaw = 0.0
+
+[node name="MeshInstance3D_259" type="MeshInstance3D" parent="DirectionArrow" unique_id=1839110865]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, 0, 0)
+material_override = SubResource("StandardMaterial3D_wj7bq")
+mesh = SubResource("BoxMesh_l24td")
+
+[node name="MeshInstance3D_260" type="MeshInstance3D" parent="DirectionArrow" unique_id=1550055355]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0.16, 0, -0.08)
+material_override = SubResource("StandardMaterial3D_k2oke")
+mesh = SubResource("BoxMesh_xgndw")
+
+[node name="MeshInstance3D_261" type="MeshInstance3D" parent="DirectionArrow" unique_id=205005233]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0.16, 0, 0.08)
+material_override = SubResource("StandardMaterial3D_vvy2w")
+mesh = SubResource("BoxMesh_cg7ol")
+
+[node name="ExitArrow" type="Node3D" parent="." unique_id=816510106 groups=["belt_direction_arrows"]]
+transform = Transform3D(-3.059797e-08, 0, -0.7, 0, 0.7, 0, 0.7, 0, -3.059797e-08, 0, 1.1, 0.38)
+metadata/normal_yaw = -90.0
+
+[node name="MeshInstance3D_263" type="MeshInstance3D" parent="ExitArrow" unique_id=978900449]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, 0, 0)
+material_override = SubResource("StandardMaterial3D_18l6a")
+mesh = SubResource("BoxMesh_7dwj5")
+
+[node name="MeshInstance3D_264" type="MeshInstance3D" parent="ExitArrow" unique_id=199654860]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0.16, 0, -0.08)
+material_override = SubResource("StandardMaterial3D_w54s0")
+mesh = SubResource("BoxMesh_jyuup")
+
+[node name="MeshInstance3D_265" type="MeshInstance3D" parent="ExitArrow" unique_id=1797784204]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0.16, 0, 0.08)
+material_override = SubResource("StandardMaterial3D_reiw1")
+mesh = SubResource("BoxMesh_58jty")
+
+[node name="TransferArea" type="Area3D" parent="." unique_id=1827046053]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.58, 0)
+collision_layer = 0
+script = ExtResource("1_v83om")
+
+[node name="TransferCollision" type="CollisionShape3D" parent="TransferArea" unique_id=1121434256]
+shape = SubResource("BoxShape3D_drvp5")

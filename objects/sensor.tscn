@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://wxr30xfq6hr4"]
+
+[ext_resource type="Script" uid="uid://6102tsitux8t" path="res://objects/sensor.gd" id="sensor_script"]
+
+[ext_resource type="PackedScene" path="res://assets/sensor/sensor_visual.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1o40k"]
+size = Vector3(0.28, 1, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_a7nx5"]
+albedo_color = Color(0.6039216, 0.68235296, 0.7254902, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_mtbnc"]
+size = Vector3(0.07, 0.48, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7bqgl"]
+albedo_color = Color(0.9137255, 0.7254902, 0.24705882, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nvky4"]
+size = Vector3(0.2, 0.17, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tweyh"]
+resource_local_to_scene = true
+albedo_color = Color(0.18942085, 0.8707594, 0.26382238, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(1, 0.23921569, 0.1254902, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_a7nx5"]
+top_radius = 0.045
+bottom_radius = 0.045
+height = 0.015
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q4d3u"]
+albedo_color = Color(0.9137255, 0.92941177, 0.9411765, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_wwpgk"]
+size = Vector3(0.16, 0.16, 0.06)
+
+[node name="Sensor" type="Area3D" unique_id=1140316583]
+collision_layer = 2
+script = ExtResource("sensor_script")
+active_color = Color(0.746546, 0, 0.010991716, 1)
+
+[node name="SensorVisual" parent="." instance=ExtResource("blender_visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5475, 0)
+
+[node name="DetectionArea" type="CollisionShape3D" parent="." unique_id=1926847137]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5475, 0)
+shape = SubResource("BoxShape3D_1o40k")
+
+[node name="Indicator" type="MeshInstance3D" parent="." unique_id=6360823]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.5175, -0.88)
+material_override = SubResource("StandardMaterial3D_tweyh")
+mesh = SubResource("CylinderMesh_a7nx5")
+

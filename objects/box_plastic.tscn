@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/box/box_plastic.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="plastic_collision"]
+size = Vector3(0.657, 0.314, 0.899)
+
+[sub_resource type="StandardMaterial3D" id="blue_plastic"]
+albedo_color = Color(0.18, 0.45, 0.78, 1)
+roughness = 0.55
+
+[node name="PlasticBox" type="RigidBody3D"]
+can_sleep = false
+continuous_cd = true
+
+[node name="PlasticVisual" parent="." instance=ExtResource("blender_visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0085, 0, 0)
+
+[node name="Box" parent="PlasticVisual" index="0"]
+material_override = SubResource("blue_plastic")
+
+[node name="PlasticCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.157, 0)
+shape = SubResource("plastic_collision")
+
+[editable path="PlasticVisual"]

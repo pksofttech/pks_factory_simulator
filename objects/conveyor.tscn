@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://dc1rcdwbl6qtj"]
+
+[ext_resource type="Script" uid="uid://b6w0uwwpgyg2n" path="res://objects/conveyor.gd" id="belt_motion"]
+[ext_resource type="PackedScene" uid="uid://bff68826j3a8i" path="res://assets/conveyor/conveyor_visual.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tsxf6"]
+size = Vector3(9, 0.25, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j64xk"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_ukksh"]
+size = Vector3(0.48, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cb8oa"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_l6ng6"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7j6j8"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_finjk"]
+size = Vector3(0.25, 0.012, 0.045)
+
+[node name="Conveyor" type="StaticBody3D" unique_id=1286993185]
+script = ExtResource("belt_motion")
+
+[node name="ConveyorVisual" parent="." unique_id=1178399896 instance=ExtResource("blender_visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+
+[node name="BeltCollision" type="CollisionShape3D" parent="." unique_id=1870494821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("BoxShape3D_tsxf6")
+
+[node name="DirectionArrow2" type="Node3D" parent="." unique_id=588773665 groups=["belt_direction_arrows"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.07, 0)
+metadata/normal_yaw = 0.0
+
+[node name="MeshInstance3D_248" type="MeshInstance3D" parent="DirectionArrow2" unique_id=657864734]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, 0, 0)
+material_override = SubResource("StandardMaterial3D_j64xk")
+mesh = SubResource("BoxMesh_ukksh")
+
+[node name="MeshInstance3D_249" type="MeshInstance3D" parent="DirectionArrow2" unique_id=925136617]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0.16, 0, -0.08)
+material_override = SubResource("StandardMaterial3D_cb8oa")
+mesh = SubResource("BoxMesh_l6ng6")
+
+[node name="MeshInstance3D_250" type="MeshInstance3D" parent="DirectionArrow2" unique_id=728122857]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0.16, 0, 0.08)
+material_override = SubResource("StandardMaterial3D_7j6j8")
+mesh = SubResource("BoxMesh_finjk")
+
+[node name="GuardLeft" parent="ConveyorVisual/Conveyor" index="23"]
+visible = false
+
+[node name="GuardRight" parent="ConveyorVisual/Conveyor" index="24"]
+visible = false
+
+[editable path="ConveyorVisual"]

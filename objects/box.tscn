@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/box/box_visual.glb" id="blender_visual"]
+
+[sub_resource type="Gradient" id="Gradient_ay8i8"]
+colors = PackedColorArray(0.5921569, 0.39215687, 0.21568628, 1, 0.8392157, 0.6392157, 0.41960785, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_et42k"]
+seed = 42
+frequency = 0.16
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_bctmu"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_et42k")
+color_ramp = SubResource("Gradient_ay8i8")
+seamless = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d7q48"]
+albedo_color = Color(0.76862746, 0.60784316, 0.83137256, 1)
+albedo_texture = SubResource("NoiseTexture2D_bctmu")
+
+[sub_resource type="BoxMesh" id="BoxMesh_10rvk"]
+size = Vector3(0.65, 0.65, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mepwu"]
+albedo_color = Color(0.8862745, 0.7764706, 0.60784316, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_6ymvw"]
+size = Vector3(0.13, 0.004, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mfu5d"]
+albedo_color = Color(0.81960785, 0.6901961, 0.5176471, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_4uhvr"]
+size = Vector3(0.13, 0.18, 0.004)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_g7nit"]
+albedo_color = Color(0.81960785, 0.6901961, 0.5176471, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_v1467"]
+size = Vector3(0.13, 0.18, 0.004)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7tw32"]
+size = Vector3(0.65, 0.65, 0.65)
+
+[node name="Box" type="RigidBody3D" unique_id=2016167764]
+can_sleep = false
+continuous_cd = true
+
+[node name="BoxVisual" parent="." instance=ExtResource("blender_visual")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.325, 0)
+
+[node name="BoxCollision" type="CollisionShape3D" parent="." unique_id=2028868366]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.325, 0)
+shape = SubResource("BoxShape3D_7tw32")

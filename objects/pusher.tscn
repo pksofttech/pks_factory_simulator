@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/pusher.gd" id="pusher_script"]
+[ext_resource type="PackedScene" path="res://assets/pusher/pusher_visual.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_stand"]
+size = Vector3(0.62, 1.35, 0.62)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_trigger"]
+size = Vector3(0.55, 0.8, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_arrow"]
+albedo_color = Color(0.9607843, 0.827451, 0.41568628, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_shaft"]
+size = Vector3(0.42, 0.012, 0.045)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wing"]
+size = Vector3(0.22, 0.012, 0.045)
+
+[node name="Pusher" type="StaticBody3D"]
+script = ExtResource("pusher_script")
+
+[node name="PusherVisual" parent="." instance=ExtResource("blender_visual")]
+
+[node name="StandCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.675, -0.1)
+shape = SubResource("BoxShape3D_stand")
+
+[node name="TriggerZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 1.05)
+collision_layer = 0
+
+[node name="TriggerCollision" type="CollisionShape3D" parent="TriggerZone"]
+shape = SubResource("BoxShape3D_trigger")
+
+[node name="DirectionArrow" type="Node3D" parent="." groups=["belt_direction_arrows"]]
+transform = Transform3D(-3.059797e-08, 0, -0.7, 0, 0.7, 0, 0.7, 0, -3.059797e-08, 0, 1.4, 0.25)
+
+[node name="Shaft" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, 0, 0)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_shaft")
+
+[node name="WingL" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0.14, 0, -0.07)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_wing")
+
+[node name="WingR" type="MeshInstance3D" parent="DirectionArrow"]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0.14, 0, 0.07)
+material_override = SubResource("StandardMaterial3D_arrow")
+mesh = SubResource("BoxMesh_wing")
