@@ -15,7 +15,7 @@ const PROP_KINDS := ["prop_rack", "prop_barrier", "prop_barrel", "prop_workbench
 const EQUIPMENT_BASE_HEIGHT := {
 	"conveyor": 0.0,
 	"conveyor_short": 0.0,
-	"turn": -0.03,
+	"turn": - 0.03,
 	"sensor": 1.0025,
 	"vision_sensor": 0.0,
 	"rgb_sensor": 0.0,
@@ -37,6 +37,8 @@ const EQUIPMENT_BASE_HEIGHT := {
 	"prop_workbench": 0.0,
 }
 const GRID_STEP := 0.5
+var grid_step: float = GRID_STEP
+var show_edit_grid: bool = true
 const SETTINGS_PATH := "user://settings.cfg"
 var conveyor: StaticBody3D
 var camera: Camera3D
@@ -142,6 +144,12 @@ var rgb_mode_row: HBoxContainer
 var rgb_mode_option: OptionButton
 var emitter_mode_row: HBoxContainer
 var emitter_mode_option: OptionButton
+var undo_button: Button
+var redo_button: Button
+const MAX_UNDO_STEPS := 30
+var undo_stack: Array[Dictionary] = []
+var redo_stack: Array[Dictionary] = []
+var _drag_undo_snapshot: Dictionary = {}
 var cabinet_title_row: HBoxContainer
 var cabinet_title_input: LineEdit
 var cabinet_parts_row: HBoxContainer
@@ -155,7 +163,19 @@ var cabinet_selected_row: int = 0
 var cabinet_slot_io_label: Label
 var cabinet_slot_kind: OptionButton
 var cabinet_slot_color: ColorPickerButton
+var tank_force_box: VBoxContainer
+var tank_force_sensors_label: Label
+var tank_force_valve_btn: Button
+var tank_force_valve_slider: HSlider
+var tank_force_valve_pct_label: Label
+var tank_edit_box: VBoxContainer
+var tank_edit_sensors_label: Label
+var tank_edit_valve_btn: Button
+var tank_edit_valve_slider: HSlider
+var tank_edit_valve_pct_label: Label
 var cabinet_slot_label: LineEdit
+var cabinet_slot_move_mode: bool = false
+var cabinet_slot_move_btn: Button
 var modbus_section_sep: HSeparator
 var modbus_section_header: Label
 var modbus_conflict_label: Label
@@ -170,30 +190,69 @@ var vision_hr_field: LineEdit
 var force_panel: PanelContainer
 var force_title: Label
 var force_status_label: Label
+var force_item_option: OptionButton
+var _force_item_sig: String = ""
 var force_on_button: Button
 var force_off_button: Button
 var force_clear_button: Button
 var io_status_panel: PanelContainer
 var io_status_list: GridContainer
-var io_status_rows: Dictionary = { }
+var io_status_rows: Dictionary = {}
+var io_status_signature: String = ""
+var io_status_expanded_cabinets: Dictionary = {}
 var object_dialog: PanelContainer
 var object_dialog_backdrop: ColorRect
+var floor_dialog_button: Button
+var floor_dialog: PanelContainer
+var floor_dialog_backdrop: ColorRect
+var grid_step_option: OptionButton
+var show_grid_check: CheckBox
 var modbus_dialog: PanelContainer
 var modbus_dialog_backdrop: ColorRect
+var modbus_enabled_check: CheckBox
 var modbus_mode_option: OptionButton
 var modbus_ip_label: Label
 var modbus_ip_input: LineEdit
 var modbus_port_input: SpinBox
 var modbus_poll_input: SpinBox
+var modbus_restart_btn: Button
 var modbus_srv_status: Label
 var modbus_io_grid: GridContainer
 var modbus_config_button: Button
+const SoftPLCScript := preload("res://soft_plc.gd")
+var soft_plc = SoftPLCScript.new()
+var ladder_dialog: PanelContainer
+var ladder_dialog_backdrop: ColorRect
+var ladder_enabled_check: CheckBox
+var ladder_code_edit: CodeEdit
+var ladder_status_label: Label
+var ladder_watch_label: Label
+var ladder_config_button: Button
+var plc_controller_option: OptionButton
+var edit_tools_row: HFlowContainer
+var edit_mode_button: Button
+var delete_tool_button: Button
+var _svg_icon_cache: Dictionary = {}
 var axis_gizmo: Control
 var start_button: Button
 var status_toggle_button: Button
-var cabinet_toggle_button: Button
 var npc_toggle_button: Button
 var npcs_enabled: bool = true
+var npc_operator_enabled: bool = true
+var npc_tester_enabled: bool = true
+var npc_safety_enabled: bool = true
+var npc_walk_speed: float = 1.85
+var npc_inspect_duration: float = 2.2
+var npc_chat_enabled: bool = true
+var npc_dialog: PanelContainer
+var npc_dialog_backdrop: ColorRect
+var npc_master_check: CheckBox
+var npc_op_check: CheckBox
+var npc_tester_check: CheckBox
+var npc_safety_check: CheckBox
+var npc_chat_check: CheckBox
+var npc_speed_spin: SpinBox
+var npc_inspect_spin: SpinBox
 var sound_toggle_button: Button
 var sound_enabled: bool = true
 var cabinet_layer: CanvasLayer
@@ -201,22 +260,22 @@ var cabinet_panel: PanelContainer
 var cabinet_coil_addr := -1
 var cabinet_input_addr := -1
 const CABINET_IO_DEFS := [
-	{ "id": "BtnStart", "label": "Cabinet.BtnStart", "kind": "button", "dir": "input" },
-	{ "id": "BtnStop", "label": "Cabinet.BtnStop", "kind": "button", "dir": "input" },
-	{ "id": "Btn01", "label": "Cabinet.Btn01", "kind": "button", "dir": "input" },
-	{ "id": "SwitchAuto", "label": "Cabinet.SwitchAuto", "kind": "switch", "dir": "input" },
-	{ "id": "SwitchEStop", "label": "Cabinet.SwitchEStop", "kind": "switch", "dir": "input" },
-	{ "id": "LampGreen", "label": "Cabinet.LampGreen", "kind": "lamp", "dir": "coil" },
-	{ "id": "LampRed", "label": "Cabinet.LampRed", "kind": "lamp", "dir": "coil" },
+	{"id": "BtnStart", "label": "Cabinet.BtnStart", "kind": "button", "dir": "input"},
+	{"id": "BtnStop", "label": "Cabinet.BtnStop", "kind": "button", "dir": "input"},
+	{"id": "Btn01", "label": "Cabinet.Btn01", "kind": "button", "dir": "input"},
+	{"id": "SwitchAuto", "label": "Cabinet.SwitchAuto", "kind": "switch", "dir": "input"},
+	{"id": "SwitchEStop", "label": "Cabinet.SwitchEStop", "kind": "switch", "dir": "input"},
+	{"id": "LampGreen", "label": "Cabinet.LampGreen", "kind": "lamp", "dir": "coil"},
+	{"id": "LampRed", "label": "Cabinet.LampRed", "kind": "lamp", "dir": "coil"},
 ]
 var cabinet_io_addrs: Dictionary = {
-	"BtnStart": -1,
-	"BtnStop": -1,
-	"Btn01": -1,
-	"SwitchAuto": -1,
-	"SwitchEStop": -1,
-	"LampGreen": -1,
-	"LampRed": -1,
+	"BtnStart": - 1,
+	"BtnStop": - 1,
+	"Btn01": - 1,
+	"SwitchAuto": - 1,
+	"SwitchEStop": - 1,
+	"LampGreen": - 1,
+	"LampRed": - 1,
 }
 var running := true
 var plc_mode := false
@@ -225,15 +284,18 @@ var test_mode := false
 var _is_loading_settings := false
 var test_box: RigidBody3D
 var elapsed := 0.0
-var spawn_clock := 0.0
 var _io_status_refresh_timer := 0.0
 var _status_style_cache: Dictionary = {}
+var _force_panel_layout_sig: String = ""
 var spawn_plastic_next := false
 var test_stopped := false
 var test_resumed := false
 var test_controls_ok := true
 var cardboard_material: StandardMaterial3D
 var plastic_material: StandardMaterial3D
+var _cardboard_color_materials: Dictionary = {}
+var _plastic_color_materials: Dictionary = {}
+var _edit_grid_material: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -296,7 +358,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
 		var scale_factor := camera_distance * 0.0015
 		camera_target += (
-			-camera.global_basis.x * event.relative.x + camera.global_basis.y * event.relative.y
+			- camera.global_basis.x * event.relative.x + camera.global_basis.y * event.relative.y
 		) * scale_factor
 		_update_camera()
 	elif event is InputEventMouseMotion and edit_mode and placement != "select":
@@ -329,6 +391,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotating_object = false
 		rotation_drag_pixels = 0.0
 		if was_editing:
+			if not _drag_undo_snapshot.is_empty():
+				var after_snap := _build_layout_data()
+				if JSON.stringify(after_snap) != JSON.stringify(_drag_undo_snapshot):
+					_record_undo_snapshot(_drag_undo_snapshot)
+				_drag_undo_snapshot = {}
 			_save_layout(true)
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R:
 		_reset_camera()
@@ -343,20 +410,35 @@ func _unhandled_input(event: InputEvent) -> void:
 	):
 		_set_placement("select")
 	elif event is InputEventKey and event.pressed and not event.echo and edit_mode:
+		if event.ctrl_pressed and event.keycode == KEY_Z:
+			if event.shift_pressed:
+				_redo()
+			else:
+				_undo()
+			return
+		if event.ctrl_pressed and event.keycode == KEY_Y:
+			_redo()
+			return
 		match event.keycode:
 			KEY_ESCAPE:
 				if is_instance_valid(modbus_dialog) and modbus_dialog.visible:
 					_set_modbus_dialog_visible(false)
+				if is_instance_valid(ladder_dialog) and ladder_dialog.visible:
+					_set_ladder_dialog_visible(false)
 				if is_instance_valid(object_dialog) and object_dialog.visible:
 					_set_object_dialog_visible(false)
+				if is_instance_valid(floor_dialog) and floor_dialog.visible:
+					_set_floor_dialog_visible(false)
+				if is_instance_valid(npc_dialog) and npc_dialog.visible:
+					_set_npc_dialog_visible(false)
 			KEY_LEFT:
-				_move_selected(Vector3(-GRID_STEP, 0, 0))
+				_move_selected(Vector3(-grid_step, 0, 0))
 			KEY_RIGHT:
-				_move_selected(Vector3(GRID_STEP, 0, 0))
+				_move_selected(Vector3(grid_step, 0, 0))
 			KEY_UP:
-				_move_selected(Vector3(0, 0, -GRID_STEP))
+				_move_selected(Vector3(0, 0, -grid_step))
 			KEY_DOWN:
-				_move_selected(Vector3(0, 0, GRID_STEP))
+				_move_selected(Vector3(0, 0, grid_step))
 			KEY_PAGEUP:
 				_move_selected_height(1)
 			KEY_PAGEDOWN:
@@ -400,8 +482,8 @@ func _set_selection(object: Node3D) -> void:
 	if is_instance_valid(selected_object):
 		_set_selection_overlay(selected_object, null)
 	selected_object = object
-	if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "cabinet":
-		_sync_2d_cabinet_customization(selected_object)
+	cabinet_slot_move_mode = false
+	_update_cabinet_panel_visibility()
 	if not is_instance_valid(object):
 		_refresh_transform_controls()
 		return
@@ -452,20 +534,20 @@ func _physics_process(delta: float) -> void:
 					box.visible = false
 				else:
 					box.queue_free()
-	if running:
-		spawn_clock += delta
-		if not test_mode and not plc_mode and spawn_clock >= 3.5 and not _has_placed_products():
-			spawn_clock = 0.0
-			_spawn_box()
 	if plc_mode:
 		_sync_modbus_io()
-	if is_instance_valid(force_panel) and force_panel.visible:
-		_refresh_force_panel()
+		if running and soft_plc.enabled and not ModbusTCP.enabled:
+			soft_plc.step(delta, ModbusTCP)
+			_sync_modbus_io()
 	_io_status_refresh_timer += delta
 	if _io_status_refresh_timer >= 0.15:
 		_io_status_refresh_timer = 0.0
 		_refresh_io_status_list()
-	_refresh_cabinet_hud()
+		if is_instance_valid(force_panel) and force_panel.visible:
+			_refresh_force_panel()
+		if is_instance_valid(ladder_dialog) and ladder_dialog.visible:
+			_refresh_ladder_watch()
+		_refresh_cabinet_hud()
 	if test_mode and elapsed >= 3.0 and not test_stopped:
 		_toggle_conveyor()
 		test_controls_ok = (
@@ -776,6 +858,8 @@ func _build_factory_decor() -> void:
 		mi.mesh = bm
 		mi.material_override = mat
 		mi.position = pos
+		if sz.y <= 0.02:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		parent.add_child(mi)
 
 	# Concrete floor expansion joints every 5m
@@ -1198,6 +1282,19 @@ func _make_status_pill(
 	return label
 
 
+func _make_svg_icon(svg_paths: String, size: int = 15) -> ImageTexture:
+	var key := "%d:%s" % [size, svg_paths]
+	if _svg_icon_cache.has(key):
+		return _svg_icon_cache[key]
+	var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 24 24" fill="none" stroke="#e6f1f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">%s</svg>' % [size, size, svg_paths]
+	var img := Image.new()
+	if img.load_svg_from_string(svg) == OK:
+		var tex := ImageTexture.create_from_image(img)
+		_svg_icon_cache[key] = tex
+		return tex
+	return null
+
+
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
 	canvas.layer = 2
@@ -1240,18 +1337,21 @@ func _build_ui() -> void:
 	sandbox_label.add_theme_font_size_override("font_size", 11)
 	toolbar.add_child(_make_ui_divider())
 
-	var edit_button := Button.new()
-	edit_button.text = "Edit"
-	edit_button.custom_minimum_size = Vector2(54, 26)
-	edit_button.add_theme_font_size_override("font_size", 11)
-	_style_accent_button(edit_button, "1b4f6e", "23668f", "3b8cb8")
-	edit_button.pressed.connect(_enter_edit_mode)
-	toolbar.add_child(edit_button)
+	edit_mode_button = Button.new()
+	edit_mode_button.text = "Edit"
+	edit_mode_button.icon = _make_svg_icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')
+	edit_mode_button.custom_minimum_size = Vector2(64, 26)
+	edit_mode_button.add_theme_font_size_override("font_size", 11)
+	edit_mode_button.tooltip_text = "Enter Edit Mode"
+	edit_mode_button.pressed.connect(_enter_edit_mode)
+	toolbar.add_child(edit_mode_button)
 
 	start_button = Button.new()
-	start_button.text = "Run"
-	start_button.custom_minimum_size = Vector2(60, 26)
-	start_button.add_theme_font_size_override("font_size", 11)
+	start_button.text = ""
+	start_button.icon = _make_svg_icon('<polygon points="6 3 20 12 6 21 6 3"/>')
+	start_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	start_button.custom_minimum_size = Vector2(34, 26)
+	start_button.tooltip_text = "Run / Stop simulation"
 	_style_accent_button(start_button, "1e6b45", "278758", "3eb87a")
 	start_button.pressed.connect(
 		func():
@@ -1264,28 +1364,34 @@ func _build_ui() -> void:
 				edit_grid.visible = false
 				edit_mode = false
 				placement = "select"
+				if is_instance_valid(edit_tools_row):
+					edit_tools_row.visible = false
+				if is_instance_valid(edit_mode_button):
+					edit_mode_button.remove_theme_stylebox_override("normal")
+					edit_mode_button.remove_theme_stylebox_override("hover")
+					edit_mode_button.remove_theme_stylebox_override("pressed")
+					edit_mode_button.remove_theme_color_override("font_color")
 				_set_running(true)
+				_update_cabinet_panel_visibility()
 				sandbox_label.text = "Mode: RUN",
 	)
 	toolbar.add_child(start_button)
 
 	var reset_button := Button.new()
-	reset_button.text = "Reset"
-	reset_button.custom_minimum_size = Vector2(54, 26)
-	reset_button.add_theme_font_size_override("font_size", 11)
+	reset_button.text = ""
+	reset_button.icon = _make_svg_icon('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>')
+	reset_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reset_button.custom_minimum_size = Vector2(32, 26)
+	reset_button.tooltip_text = "Reset simulation"
 	reset_button.pressed.connect(_reset_simulation)
 	toolbar.add_child(reset_button)
 
-	var reset_view := Button.new()
-	reset_view.text = "Reset View"
-	reset_view.custom_minimum_size = Vector2(78, 26)
-	reset_view.add_theme_font_size_override("font_size", 11)
-	reset_view.pressed.connect(_reset_camera)
-	toolbar.add_child(reset_view)
+	toolbar.add_child(_make_ui_divider())
 
 	modbus_config_button = Button.new()
-	modbus_config_button.text = "Modbus Setup"
-	modbus_config_button.custom_minimum_size = Vector2(92, 26)
+	modbus_config_button.text = "Modbus"
+	modbus_config_button.icon = _make_svg_icon('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>')
+	modbus_config_button.custom_minimum_size = Vector2(78, 26)
 	modbus_config_button.add_theme_font_size_override("font_size", 11)
 	modbus_config_button.tooltip_text = "Configure Modbus TCP server & I/O mapping"
 	modbus_config_button.pressed.connect(
@@ -1296,83 +1402,87 @@ func _build_ui() -> void:
 	)
 	toolbar.add_child(modbus_config_button)
 
+	ladder_config_button = Button.new()
+	ladder_config_button.text = "Ladder"
+	ladder_config_button.icon = _make_svg_icon('<path d="M8 3v18M16 3v18M8 8h8M8 13h8M8 18h8"/>')
+	ladder_config_button.custom_minimum_size = Vector2(78, 26)
+	ladder_config_button.add_theme_font_size_override("font_size", 11)
+	ladder_config_button.tooltip_text = "Open IEC 61131-3 Ladder / IL Soft-PLC editor"
+	ladder_config_button.pressed.connect(
+		func():
+			_set_ladder_dialog_visible(
+				not ladder_dialog.visible if is_instance_valid(ladder_dialog) else true
+			),
+	)
+	toolbar.add_child(ladder_config_button)
+
+	plc_controller_option = OptionButton.new()
+	plc_controller_option.add_item("PLC: OFF", 0)
+	plc_controller_option.add_item("PLC: Modbus", 1)
+	plc_controller_option.add_item("PLC: Ladder", 2)
+	plc_controller_option.custom_minimum_size = Vector2(114, 26)
+	plc_controller_option.add_theme_font_size_override("font_size", 11)
+	plc_controller_option.tooltip_text = "Select PLC controller mode (OFF / External Modbus / Internal Ladder)"
+	plc_controller_option.select(2 if soft_plc.enabled else (1 if ModbusTCP.enabled else 0))
+	plc_controller_option.item_selected.connect(
+		func(idx: int):
+			_set_controller_mode(idx, true),
+	)
+	toolbar.add_child(plc_controller_option)
+
 	status_toggle_button = Button.new()
-	status_toggle_button.text = "Status: ON"
-	status_toggle_button.custom_minimum_size = Vector2(78, 26)
+	status_toggle_button.text = "Status"
+	status_toggle_button.icon = _make_svg_icon('<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>')
+	status_toggle_button.custom_minimum_size = Vector2(74, 26)
 	status_toggle_button.add_theme_font_size_override("font_size", 11)
 	status_toggle_button.tooltip_text = "Show or hide OBJECT STATUS panel"
 	_style_accent_button(status_toggle_button, "1b4f6e", "23668f", "3b8cb8")
 	status_toggle_button.pressed.connect(_toggle_io_status_panel)
 	toolbar.add_child(status_toggle_button)
 
-	cabinet_toggle_button = Button.new()
-	cabinet_toggle_button.text = "Cabinet: ON"
-	cabinet_toggle_button.custom_minimum_size = Vector2(84, 26)
-	cabinet_toggle_button.add_theme_font_size_override("font_size", 11)
-	cabinet_toggle_button.tooltip_text = "Show or hide 2D Control Cabinet CanvasLayer"
-	_style_accent_button(cabinet_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-	cabinet_toggle_button.pressed.connect(_toggle_cabinet_panel)
-	toolbar.add_child(cabinet_toggle_button)
-
 	npc_toggle_button = Button.new()
-	npc_toggle_button.text = "NPC: ON"
-	npc_toggle_button.custom_minimum_size = Vector2(72, 26)
+	npc_toggle_button.text = "NPCs"
+	npc_toggle_button.icon = _make_svg_icon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>')
+	npc_toggle_button.custom_minimum_size = Vector2(68, 26)
 	npc_toggle_button.add_theme_font_size_override("font_size", 11)
-	npc_toggle_button.tooltip_text = "Show or hide factory NPCs"
+	npc_toggle_button.tooltip_text = "Configure Factory NPCs"
 	_style_accent_button(npc_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-	npc_toggle_button.pressed.connect(_toggle_npcs)
+	npc_toggle_button.pressed.connect(
+		func():
+			_set_npc_dialog_visible(
+				not npc_dialog.visible if is_instance_valid(npc_dialog) else true
+			),
+	)
 	toolbar.add_child(npc_toggle_button)
 
+	var toolbar_spacer := Control.new()
+	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	toolbar_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toolbar.add_child(toolbar_spacer)
+
 	sound_toggle_button = Button.new()
-	sound_toggle_button.text = "Sound: ON"
-	sound_toggle_button.custom_minimum_size = Vector2(78, 26)
-	sound_toggle_button.add_theme_font_size_override("font_size", 11)
+	sound_toggle_button.text = ""
+	sound_toggle_button.icon = _make_svg_icon('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>')
+	sound_toggle_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sound_toggle_button.custom_minimum_size = Vector2(32, 26)
 	sound_toggle_button.tooltip_text = "Mute or unmute factory machine audio"
 	_style_accent_button(sound_toggle_button, "1b4f6e", "23668f", "3b8cb8")
 	sound_toggle_button.pressed.connect(_toggle_sound)
 	toolbar.add_child(sound_toggle_button)
 
-	toolbar.add_child(_make_ui_divider())
-
-	# Env work space
-	var env_label := Label.new()
-	env_label.text = "Env:"
-	env_label.add_theme_font_size_override("font_size", 11)
-	env_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	toolbar.add_child(env_label)
-
-	decor_option = OptionButton.new()
-	decor_option.custom_minimum_size = Vector2(96, 26)
-	decor_option.add_theme_font_size_override("font_size", 11)
-	var theme_keys := DECOR_THEMES.keys()
-	for i in theme_keys.size():
-		var k: String = theme_keys[i]
-		decor_option.add_item(DECOR_THEMES[k]["label"], i)
-	decor_option.item_selected.connect(
-		func(idx: int):
-			var keys := DECOR_THEMES.keys()
-			if idx >= 0 and idx < keys.size():
-				_apply_decor_style(keys[idx]),
-	)
-	toolbar.add_child(decor_option)
-
-	# Row 2: Placement, Transform, Layout & Workspace Tools
-	var edit_tools := HFlowContainer.new()
-	edit_tools.add_theme_constant_override("h_separation", 6)
-	edit_tools.add_theme_constant_override("v_separation", 6)
-	column.add_child(edit_tools)
-
-	var select_button := Button.new()
-	select_button.text = "Select"
-	select_button.pressed.connect(
-		func():
-			_enter_edit_mode()
-			_set_placement("select"),
-	)
-	edit_tools.add_child(select_button)
+	# Row 2: Placement, Transform, Layout & Workspace Tools (shown only in Edit Mode)
+	edit_tools_row = HFlowContainer.new()
+	edit_tools_row.add_theme_constant_override("h_separation", 5)
+	edit_tools_row.add_theme_constant_override("v_separation", 4)
+	edit_tools_row.visible = false
+	column.add_child(edit_tools_row)
 
 	var add_object_button := Button.new()
-	add_object_button.text = "+ Add Object..."
+	add_object_button.text = "Add"
+	add_object_button.icon = _make_svg_icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/>')
+	add_object_button.custom_minimum_size = Vector2(62, 26)
+	add_object_button.add_theme_font_size_override("font_size", 11)
+	add_object_button.tooltip_text = "Add Object..."
 	_style_accent_button(add_object_button, "1b4f6e", "23668f", "3b8cb8")
 	add_object_button.pressed.connect(
 		func():
@@ -1380,90 +1490,76 @@ func _build_ui() -> void:
 				not object_dialog.visible if is_instance_valid(object_dialog) else true
 			),
 	)
-	edit_tools.add_child(add_object_button)
+	edit_tools_row.add_child(add_object_button)
 
-	edit_tools.add_child(_make_ui_divider())
+	delete_tool_button = Button.new()
+	delete_tool_button.text = ""
+	delete_tool_button.icon = _make_svg_icon('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>')
+	delete_tool_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	delete_tool_button.custom_minimum_size = Vector2(32, 26)
+	delete_tool_button.tooltip_text = "Delete selected (Del)"
+	delete_tool_button.disabled = true
+	_style_accent_button(delete_tool_button, "592428", "783036", "a34850")
+	delete_tool_button.pressed.connect(_delete_selected)
+	edit_tools_row.add_child(delete_tool_button)
 
-	var rotate_left := Button.new()
-	rotate_left.text = "Rotate -90° (Q)"
-	rotate_left.pressed.connect(
+	edit_tools_row.add_child(_make_ui_divider())
+
+	undo_button = Button.new()
+	undo_button.text = ""
+	undo_button.icon = _make_svg_icon('<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>')
+	undo_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	undo_button.custom_minimum_size = Vector2(32, 26)
+	undo_button.tooltip_text = "Undo last edit (Ctrl+Z)"
+	undo_button.disabled = true
+	undo_button.pressed.connect(_undo)
+	edit_tools_row.add_child(undo_button)
+
+	redo_button = Button.new()
+	redo_button.text = ""
+	redo_button.icon = _make_svg_icon('<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>')
+	redo_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	redo_button.custom_minimum_size = Vector2(32, 26)
+	redo_button.tooltip_text = "Redo last edit (Ctrl+Y)"
+	redo_button.disabled = true
+	redo_button.pressed.connect(_redo)
+	edit_tools_row.add_child(redo_button)
+
+	edit_tools_row.add_child(_make_ui_divider())
+
+	var save_btn := Button.new()
+	save_btn.text = ""
+	save_btn.icon = _make_svg_icon('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>')
+	save_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	save_btn.custom_minimum_size = Vector2(32, 26)
+	save_btn.tooltip_text = "Save layout"
+	save_btn.pressed.connect(func(): _save_layout(false))
+	edit_tools_row.add_child(save_btn)
+
+	var load_btn := Button.new()
+	load_btn.text = ""
+	load_btn.icon = _make_svg_icon('<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>')
+	load_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	load_btn.custom_minimum_size = Vector2(32, 26)
+	load_btn.tooltip_text = "Load layout"
+	load_btn.pressed.connect(func(): _load_layout(false))
+	edit_tools_row.add_child(load_btn)
+
+	edit_tools_row.add_child(_make_ui_divider())
+
+	floor_dialog_button = Button.new()
+	floor_dialog_button.text = "%d×%d" % [workspace_width, workspace_depth]
+	floor_dialog_button.icon = _make_svg_icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>')
+	floor_dialog_button.custom_minimum_size = Vector2(72, 26)
+	floor_dialog_button.add_theme_font_size_override("font_size", 11)
+	floor_dialog_button.tooltip_text = "Configure Workspace Size, Grid & Environment"
+	floor_dialog_button.pressed.connect(
 		func():
-			_rotate_selected(-1),
+			_set_floor_dialog_visible(
+				not floor_dialog.visible if is_instance_valid(floor_dialog) else true
+			),
 	)
-	edit_tools.add_child(rotate_left)
-
-	var rotate_right := Button.new()
-	rotate_right.text = "Rotate +90° (E)"
-	rotate_right.pressed.connect(
-		func():
-			_rotate_selected(1),
-	)
-	edit_tools.add_child(rotate_right)
-
-	var reverse_turn := Button.new()
-	reverse_turn.text = "Reverse Turn (F)"
-	reverse_turn.pressed.connect(_toggle_turn_direction)
-	edit_tools.add_child(reverse_turn)
-
-	var delete_button := Button.new()
-	delete_button.text = "Delete"
-	_style_accent_button(delete_button, "592428", "783036", "a34850")
-	delete_button.pressed.connect(_delete_selected)
-	edit_tools.add_child(delete_button)
-
-	edit_tools.add_child(_make_ui_divider())
-
-	for item in [
-		[
-			"Save",
-			func():
-				_save_layout(false),
-		],
-		[
-			"Load",
-			func():
-				_load_layout(false),
-		],
-	]:
-		var button := Button.new()
-		button.text = item[0]
-		button.pressed.connect(item[1])
-		edit_tools.add_child(button)
-
-	edit_tools.add_child(_make_ui_divider())
-
-	var size_title := Label.new()
-	size_title.text = "Floor:"
-	size_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	edit_tools.add_child(size_title)
-
-	width_input = SpinBox.new()
-	width_input.min_value = 10
-	width_input.max_value = 100
-	width_input.step = 1
-	width_input.value = workspace_width
-	width_input.custom_minimum_size.x = 76
-	edit_tools.add_child(width_input)
-
-	var x_label := Label.new()
-	x_label.text = "×"
-	x_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	edit_tools.add_child(x_label)
-
-	depth_input = SpinBox.new()
-	depth_input.min_value = 10
-	depth_input.max_value = 100
-	depth_input.step = 1
-	depth_input.value = workspace_depth
-	depth_input.custom_minimum_size.x = 76
-	edit_tools.add_child(depth_input)
-
-	var apply_size := Button.new()
-	apply_size.text = "Apply"
-	apply_size.pressed.connect(_apply_workspace_input)
-	edit_tools.add_child(apply_size)
-
-	edit_tools.add_child(_make_ui_divider())
+	edit_tools_row.add_child(floor_dialog_button)
 
 	# Bottom-left keyboard shortcut hint pill
 	var info_pill := PanelContainer.new()
@@ -1502,7 +1598,10 @@ func _build_ui() -> void:
 	_build_cabinet_canvas_layer()
 	_sync_2d_cabinet_customization(_get_cabinet_node())
 	_build_object_dialog(ui_root)
+	_build_floor_dialog(ui_root)
+	_build_npc_dialog(ui_root)
 	_build_modbus_dialog(ui_root)
+	_build_ladder_dialog(ui_root)
 
 
 func _build_io_status_panel(ui_root: Control) -> void:
@@ -1543,7 +1642,7 @@ func _toggle_io_status_panel() -> void:
 		return
 	io_status_panel.visible = not io_status_panel.visible
 	if is_instance_valid(status_toggle_button):
-		status_toggle_button.text = "Status: ON" if io_status_panel.visible else "Status: OFF"
+		status_toggle_button.text = "Status"
 		if io_status_panel.visible:
 			_style_accent_button(status_toggle_button, "1b4f6e", "23668f", "3b8cb8")
 		else:
@@ -1554,6 +1653,17 @@ func _toggle_io_status_panel() -> void:
 	if io_status_panel.visible:
 		_refresh_io_status_list()
 	_save_settings()
+
+
+func _set_label_if_changed(lbl: Label, txt: String, col: Color = Color.TRANSPARENT) -> void:
+	if not is_instance_valid(lbl):
+		return
+	if lbl.text != txt:
+		lbl.text = txt
+	if col != Color.TRANSPARENT:
+		if not lbl.has_meta("_last_font_col") or (lbl.get_meta("_last_font_col") as Color) != col:
+			lbl.set_meta("_last_font_col", col)
+			lbl.add_theme_color_override("font_color", col)
 
 
 func _apply_status_btn_style(btn: Button, io_col: Color, is_selected: bool) -> void:
@@ -1591,13 +1701,30 @@ func _apply_status_btn_style(btn: Button, io_col: Color, is_selected: bool) -> v
 
 func _apply_npcs_enabled(enabled: bool) -> void:
 	npcs_enabled = enabled
+	_apply_npc_settings()
+
+
+func _apply_npc_settings() -> void:
 	for npc in get_tree().get_nodes_in_group("factory_npcs"):
-		if is_instance_valid(npc) and npc is Node3D:
-			(npc as Node3D).visible = npcs_enabled
-			npc.set_physics_process(npcs_enabled)
+		if not is_instance_valid(npc) or not (npc is Node3D):
+			continue
+		var individual := true
+		if npc.name == "OperatorNPC":
+			individual = npc_operator_enabled
+		elif npc.name == "TesterNPC":
+			individual = npc_tester_enabled
+		elif npc.name == "SafetyNPC":
+			individual = npc_safety_enabled
+		var active := npcs_enabled and individual
+		(npc as Node3D).visible = active
+		npc.set_physics_process(active)
+		npc.set("walk_speed", npc_walk_speed)
+		npc.set("inspect_duration", npc_inspect_duration)
+		npc.set("chat_enabled", npc_chat_enabled)
 	if is_instance_valid(npc_toggle_button):
-		npc_toggle_button.text = "NPC: ON" if npcs_enabled else "NPC: OFF"
-		if npcs_enabled:
+		var any_on := npcs_enabled and (npc_operator_enabled or npc_tester_enabled or npc_safety_enabled)
+		npc_toggle_button.text = "NPCs"
+		if any_on:
 			_style_accent_button(npc_toggle_button, "1b4f6e", "23668f", "3b8cb8")
 		else:
 			npc_toggle_button.remove_theme_stylebox_override("normal")
@@ -1606,9 +1733,21 @@ func _apply_npcs_enabled(enabled: bool) -> void:
 			npc_toggle_button.remove_theme_color_override("font_color")
 
 
-func _toggle_npcs() -> void:
-	_apply_npcs_enabled(not npcs_enabled)
-	_save_settings()
+func _reset_npc_positions() -> void:
+	var spawn_map := {
+		"OperatorNPC": Vector3(-2.0, 0.0, 2.2),
+		"TesterNPC": Vector3(6.5, 0.0, -2.5),
+		"SafetyNPC": Vector3(-6.0, 0.0, -3.0),
+	}
+	for npc in get_tree().get_nodes_in_group("factory_npcs"):
+		if is_instance_valid(npc) and npc is Node3D and spawn_map.has(npc.name):
+			(npc as Node3D).position = spawn_map[npc.name]
+			if "_waypoints" in npc:
+				npc.set("_waypoints", [])
+				npc.set("_waypoint_idx", 0)
+				npc.set("_inspecting", false)
+				npc.set("_chatting", false)
+	sandbox_label.text = "NPC positions reset"
 
 
 func _apply_sound_enabled(enabled: bool) -> void:
@@ -1617,7 +1756,10 @@ func _apply_sound_enabled(enabled: bool) -> void:
 	if fa != null:
 		fa.call("set_sound_enabled", sound_enabled)
 	if is_instance_valid(sound_toggle_button):
-		sound_toggle_button.text = "Sound: ON" if sound_enabled else "Sound: OFF"
+		sound_toggle_button.text = ""
+		sound_toggle_button.icon = _make_svg_icon(
+			'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' if sound_enabled else '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>'
+		)
 		if sound_enabled:
 			_style_accent_button(sound_toggle_button, "1b4f6e", "23668f", "3b8cb8")
 		else:
@@ -1665,10 +1807,26 @@ func _selected_cabinet_slot_kind_str() -> String:
 			return "push_button"
 		2:
 			return "switch_select"
+		3:
+			return "switch_3pos"
+		4:
+			return "potentiometer"
 		_:
 			return "lamp"
 
 func _on_cabinet_grid_cell_pressed(col: int, row: int) -> void:
+	if cabinet_slot_move_mode and is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "cabinet":
+		cabinet_slot_move_mode = false
+		if _get_builtin_slot_label(selected_object, col, row).is_empty():
+			var pre_move := _build_layout_data()
+			if bool(selected_object.call("move_slot_module", cabinet_selected_col, cabinet_selected_row, col, row)):
+				_record_undo_snapshot(pre_move)
+				cabinet_selected_col = col
+				cabinet_selected_row = row
+				_sync_2d_cabinet_customization(selected_object)
+				_save_settings()
+		_refresh_cabinet_slot_grid()
+		return
 	cabinet_selected_col = col
 	cabinet_selected_row = row
 	if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "cabinet":
@@ -1681,6 +1839,10 @@ func _on_cabinet_grid_cell_pressed(col: int, row: int) -> void:
 						cabinet_slot_kind.select(1)
 					elif k == "switch_select":
 						cabinet_slot_kind.select(2)
+					elif k == "switch_3pos":
+						cabinet_slot_kind.select(3)
+					elif k == "potentiometer":
+						cabinet_slot_kind.select(4)
 					else:
 						cabinet_slot_kind.select(0)
 				if is_instance_valid(cabinet_slot_color):
@@ -1701,12 +1863,14 @@ func _on_live_edit_cabinet_slot() -> void:
 	}
 	if bool(selected_object.call("update_slot_module", cabinet_selected_col, cabinet_selected_row, props)):
 		_sync_2d_cabinet_customization(selected_object)
-		_refresh_cabinet_slot_grid()
+		_refresh_transform_controls()
 		_save_settings()
 	else:
 		_refresh_cabinet_slot_io_preview()
 
 func _get_builtin_slot_label(cab: Node3D, col: int, row: int) -> String:
+	if not bool(cab.get("show_builtin_items")):
+		return ""
 	if row == 1:
 		if col == 0:
 			return str(cab.get("lamp_green_label")).substr(0, 5)
@@ -1751,39 +1915,76 @@ func _refresh_cabinet_slot_grid() -> void:
 			elif dyn_map.has(key):
 				var mod: Dictionary = dyn_map[key]
 				var mkind := str(mod.get("kind", ""))
-				var icon := "■" if mkind in ["push_button", "button"] else ("◈" if mkind == "switch_select" else "●")
+				var icon := "■" if mkind in ["push_button", "button"] else ("◈" if mkind == "switch_select" else ("❖" if mkind == "switch_3pos" else ("◎" if mkind == "potentiometer" else "●")))
 				var lbl := str(mod.get("label", "MOD")).substr(0, 5)
-				btn.text = ("%s%s" % [icon, lbl]) if not is_sel else ("[%s]" % lbl)
+				btn.text = ("[%s %s]" % [icon, lbl]) if is_sel else ("%s %s" % [icon, lbl])
 				btn.disabled = false
-				var raw_col = mod.get("color", Color("18d97c"))
-				btn.modulate = raw_col if raw_col is Color else Color(str(raw_col))
+				btn.modulate = Color(0.75, 0.92, 1.0, 1.0) if is_sel else Color.WHITE
 			else:
 				btn.text = "[ + ]" if is_sel else "+"
 				btn.disabled = false
 				btn.modulate = Color(0.75, 0.92, 1.0, 1.0) if is_sel else Color(0.85, 0.88, 0.92, 0.85)
+	var sel_key := "%d_%d" % [cabinet_selected_col, cabinet_selected_row]
+	var has_dyn_selected := dyn_map.has(sel_key)
+	if is_instance_valid(cabinet_slot_move_btn):
+		cabinet_slot_move_btn.disabled = (not has_dyn_selected) and (not cabinet_slot_move_mode)
+		cabinet_slot_move_btn.text = "Cancel" if cabinet_slot_move_mode else "Move"
+		if cabinet_slot_move_mode:
+			_style_accent_button(cabinet_slot_move_btn, "1b4f6e", "23668f", "3b8cb8")
+		else:
+			cabinet_slot_move_btn.remove_theme_stylebox_override("normal")
+			cabinet_slot_move_btn.remove_theme_stylebox_override("hover")
+			cabinet_slot_move_btn.remove_theme_stylebox_override("pressed")
+			cabinet_slot_move_btn.remove_theme_color_override("font_color")
 	_refresh_cabinet_slot_io_preview()
+
+func _on_toggle_cabinet_slot_move() -> void:
+	cabinet_slot_move_mode = not cabinet_slot_move_mode
+	_refresh_cabinet_slot_grid()
 
 func _refresh_cabinet_slot_io_preview() -> void:
 	if not is_instance_valid(cabinet_slot_io_label):
 		return
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
 		return
+	if cabinet_slot_move_mode:
+		cabinet_slot_io_label.text = "Move (%d,%d) -> Click target slot" % [cabinet_selected_col, cabinet_selected_row]
+		return
 	var kind := _selected_cabinet_slot_kind_str()
-	var is_input := kind in ["push_button", "button", "switch_select"]
+	var is_pot := kind == "potentiometer"
+	var is_input := kind in ["push_button", "button", "switch_select", "switch_3pos"]
 	var dyn_slots: Array = selected_object.get("dynamic_slots") if "dynamic_slots" in selected_object else []
 	var idx := 0
 	var found := false
 	for item in dyn_slots:
 		if item is Dictionary:
-			var item_is_input := str(item.get("kind", "")) in ["push_button", "button", "switch_select"]
-			if item_is_input == is_input:
-				if int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
-					found = true
-					break
-				idx += 1
-	var base_addr := int(selected_object.get_meta("modbus_input" if is_input else "modbus_coil", -1))
-	var iec_prefix := "IX" if is_input else "QX"
-	var addr_str := _format_iec_address(base_addr + 3 + idx, iec_prefix) if base_addr >= 0 else "Unassigned"
+			var mk := str(item.get("kind", ""))
+			if is_pot:
+				if mk == "potentiometer":
+					if int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
+						found = true
+						break
+					idx += 1
+			else:
+				var item_is_input := mk in ["push_button", "button", "switch_select", "switch_3pos"]
+				if item_is_input == is_input and mk != "potentiometer":
+					if int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
+						found = true
+						break
+					idx += 2 if mk == "switch_3pos" else 1
+	var addr_str := "Unassigned"
+	if is_pot:
+		var ir_addr := int(selected_object.get_meta("modbus_input_reg", -1))
+		if ir_addr >= 0:
+			addr_str = _format_word_address(ir_addr + idx, "IW")
+	else:
+		var base_addr := int(selected_object.get_meta("modbus_input" if is_input else "modbus_coil", -1))
+		var iec_prefix := "IX" if is_input else "QX"
+		if base_addr >= 0:
+			if kind == "switch_3pos":
+				addr_str = "%s / %s" % [_format_iec_address(base_addr + 3 + idx, "IX"), _format_iec_address(base_addr + 4 + idx, "IX")]
+			else:
+				addr_str = _format_iec_address(base_addr + 3 + idx, iec_prefix)
 	var state_tag := "(Placed)" if found else "(Next)"
 	cabinet_slot_io_label.text = "Slot (%d,%d) %s -> %s" % [cabinet_selected_col, cabinet_selected_row, state_tag, addr_str]
 
@@ -1794,30 +1995,34 @@ func _on_apply_cabinet_slot() -> void:
 		return
 	var col := cabinet_selected_col
 	var row := cabinet_selected_row
+	cabinet_slot_move_mode = false
+	_record_undo_snapshot()
 	var kind := _selected_cabinet_slot_kind_str()
 	var color: Color = cabinet_slot_color.color if is_instance_valid(cabinet_slot_color) else Color("18d97c")
 	var lbl := cabinet_slot_label.text.strip_edges()
 	if lbl.is_empty():
-		lbl = "BTN" if kind == "push_button" else ("SW" if kind == "switch_select" else "LAMP")
+		lbl = "BTN" if kind == "push_button" else ("SW" if kind == "switch_select" else ("SW3" if kind == "switch_3pos" else ("VR1" if kind == "potentiometer" else "LAMP")))
 	selected_object.call("set_slot_module", col, row, kind, lbl, color)
 	_sync_2d_cabinet_customization(selected_object)
-	_refresh_cabinet_slot_grid()
+	_refresh_transform_controls()
 	_save_settings()
 
 func _on_clear_cabinet_slot() -> void:
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
 		return
+	_record_undo_snapshot()
 	selected_object.call("clear_slot", cabinet_selected_col, cabinet_selected_row)
 	_sync_2d_cabinet_customization(selected_object)
-	_refresh_cabinet_slot_grid()
+	_refresh_transform_controls()
 	_save_settings()
 
 func _on_clear_all_cabinet_slots() -> void:
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
 		return
+	_record_undo_snapshot()
 	selected_object.call("clear_all_dynamic_slots")
 	_sync_2d_cabinet_customization(selected_object)
-	_refresh_cabinet_slot_grid()
+	_refresh_transform_controls()
 	_save_settings()
 
 
@@ -1865,25 +2070,57 @@ func _build_cabinet_canvas_layer() -> void:
 				cab.set("selector_auto", bool(cabinet_layer.get("switch_auto_active")))
 				cab.call("_update_selector"),
 	)
-	_refresh_cabinet_hud()
+	cabinet_layer.connect(
+		"dynamic_button_changed",
+		func(io_id: String, is_active: bool):
+			var cab := _get_active_cabinet_node()
+			if is_instance_valid(cab) and "dynamic_button_states" in cab:
+				var st: Dictionary = cab.get("dynamic_button_states")
+				st[io_id] = is_active,
+	)
+	cabinet_layer.connect(
+		"dynamic_switch_changed",
+		func(io_id: String, is_active: bool):
+			var cab := _get_active_cabinet_node()
+			if is_instance_valid(cab) and "dynamic_button_states" in cab:
+				var st: Dictionary = cab.get("dynamic_button_states")
+				st[io_id] = is_active
+				cab.call("_apply_dynamic_item_visual", io_id, is_active),
+	)
+	cabinet_layer.connect(
+		"dynamic_switch_3pos_changed",
+		func(io_id: String, pos: int):
+			var cab := _get_active_cabinet_node()
+			if is_instance_valid(cab) and cab.has_method("set_dynamic_switch_3pos"):
+				cab.call("set_dynamic_switch_3pos", io_id, pos),
+	)
+	cabinet_layer.connect(
+		"dynamic_pot_changed",
+		func(io_id: String, val: float):
+			var cab := _get_active_cabinet_node()
+			if is_instance_valid(cab) and cab.has_method("set_dynamic_pot"):
+				cab.call("set_dynamic_pot", io_id, val),
+	)
+	_update_cabinet_panel_visibility()
 
 
-func _toggle_cabinet_panel() -> void:
+func _update_cabinet_panel_visibility() -> void:
 	if not is_instance_valid(cabinet_panel):
 		return
-	cabinet_panel.visible = not cabinet_panel.visible
-	if is_instance_valid(cabinet_toggle_button):
-		cabinet_toggle_button.text = "Cabinet: ON" if cabinet_panel.visible else "Cabinet: OFF"
-		if cabinet_panel.visible:
-			_style_accent_button(cabinet_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-		else:
-			cabinet_toggle_button.remove_theme_stylebox_override("normal")
-			cabinet_toggle_button.remove_theme_stylebox_override("hover")
-			cabinet_toggle_button.remove_theme_stylebox_override("pressed")
-			cabinet_toggle_button.remove_theme_color_override("font_color")
+	var has_selected_cabinet := (
+		is_instance_valid(selected_object)
+		and str(selected_object.get_meta("kind", "")) == "cabinet"
+	)
+	cabinet_panel.visible = has_selected_cabinet
 	if cabinet_panel.visible:
+		if edit_mode:
+			cabinet_panel.offset_left = -536
+			cabinet_panel.offset_right = -400
+		else:
+			cabinet_panel.offset_left = -240
+			cabinet_panel.offset_right = -16
+		_sync_2d_cabinet_customization(selected_object)
 		_refresh_cabinet_hud()
-	_save_settings()
 
 
 func _refresh_cabinet_hud() -> void:
@@ -1895,10 +2132,28 @@ func _refresh_cabinet_hud() -> void:
 	var spd := float(conveyor.get("speed")) if is_instance_valid(conveyor) and "speed" in conveyor else BELT_SPEED
 	var hr0 := ModbusTCP.get_holding_register(0)
 	var cab := _get_active_cabinet_node()
-	if is_instance_valid(cab) and not plc_mode:
-		cab.set("active", running)
-		cabinet_layer.set("lamp_green_on", running)
-		cabinet_layer.set("lamp_red_on", bool(cab.get("estop_active")))
+	if is_instance_valid(cab):
+		var c3d := cabinet_layer.get("cabinet_3d") as Node3D
+		if is_instance_valid(c3d) and "forced_items" in cab:
+			var cab_forced: Dictionary = cab.get("forced_items")
+			if c3d.get("forced_items") != cab_forced:
+				c3d.set("forced_items", cab_forced.duplicate())
+				c3d.call("_update_lights")
+		if not plc_mode:
+			if bool(cab.get("active")) != running:
+				cab.set("active", running)
+			cabinet_layer.set("lamp_green_on", running)
+			cabinet_layer.set("lamp_red_on", bool(cab.get("estop_active")))
+		var c_addr := int(cab.get_meta("modbus_coil", -1))
+		var dyn_slots: Array = cab.get("dynamic_slots") if "dynamic_slots" in cab else []
+		var dyn_out_idx := 0
+		for slot_item in dyn_slots:
+			if slot_item is Dictionary and str(slot_item.get("kind", "")) == "lamp":
+				var slot_io := str(slot_item.get("io_id", ""))
+				var lit := ModbusTCP.get_coil(c_addr + 3 + dyn_out_idx) if c_addr >= 0 else false
+				if is_instance_valid(c3d):
+					c3d.call("set_dynamic_lamp", slot_io, lit)
+				dyn_out_idx += 1
 	cabinet_layer.call("update_display", running, plc_mode, detected_count, spd, hr0, false)
 
 
@@ -1959,6 +2214,224 @@ func _get_cabinet_io_active(io_id: String) -> bool:
 	return false
 
 
+func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
+	var items: Array[Dictionary] = []
+	var c_addr := int(cab.get_meta("modbus_coil", -1))
+	var i_addr := int(cab.get_meta("modbus_input", -1))
+	var forced_map: Dictionary = cab.get("forced_items") if "forced_items" in cab else {}
+	if bool(cab.get("show_builtin_items")):
+		items.append({
+			"key": "start",
+			"label": "■ " + str(cab.get("btn_start_label")),
+			"dir": "input",
+			"addr": i_addr + 0 if i_addr >= 0 else -1,
+			"active": bool(cab.get("start_pressed")),
+			"forced": false,
+		})
+		items.append({
+			"key": "stop",
+			"label": "■ " + str(cab.get("btn_stop_label")),
+			"dir": "input",
+			"addr": i_addr + 1 if i_addr >= 0 else -1,
+			"active": bool(cab.get("stop_pressed")),
+			"forced": false,
+		})
+		if bool(cab.get("show_rev_btn")):
+			items.append({
+				"key": "rev",
+				"label": "■ " + str(cab.get("btn01_label")),
+				"dir": "input",
+				"addr": - 1,
+				"active": bool(cab.get("reverse_pressed")),
+				"forced": false,
+			})
+		items.append({
+			"key": "auto",
+			"label": "◈ " + str(cab.get("switch_auto_label")),
+			"dir": "input",
+			"addr": - 1,
+			"active": bool(cab.get("selector_auto")),
+			"forced": false,
+		})
+		items.append({
+			"key": "estop",
+			"label": "◈ " + str(cab.get("switch_estop_label")),
+			"dir": "input",
+			"addr": i_addr + 2 if i_addr >= 0 else -1,
+			"active": bool(cab.get("estop_active")),
+			"forced": false,
+		})
+		var g_forced := forced_map.has("lamp_g")
+		items.append({
+			"key": "lamp_g",
+			"label": "● " + str(cab.get("lamp_green_label")),
+			"dir": "coil",
+			"addr": c_addr + 0 if c_addr >= 0 else -1,
+			"active": bool(forced_map["lamp_g"]) if g_forced else (bool(cab.get("lamp_green_on")) or bool(cab.get("active"))),
+			"forced": g_forced,
+		})
+		if bool(cab.get("show_yellow_lamp")):
+			var y_forced := forced_map.has("lamp_y")
+			items.append({
+				"key": "lamp_y",
+				"label": "● " + str(cab.get("lamp_yellow_label")),
+				"dir": "coil",
+				"addr": c_addr + 1 if c_addr >= 0 else -1,
+				"active": bool(forced_map["lamp_y"]) if y_forced else bool(cab.get("lamp_yellow_on")),
+				"forced": y_forced,
+			})
+		var r_forced := forced_map.has("lamp_r")
+		items.append({
+			"key": "lamp_r",
+			"label": "● " + str(cab.get("lamp_red_label")),
+			"dir": "coil",
+			"addr": c_addr + 2 if c_addr >= 0 else -1,
+			"active": bool(forced_map["lamp_r"]) if r_forced else bool(cab.get("lamp_red_on")),
+			"forced": r_forced,
+		})
+	var dyn_slots: Array = cab.get("dynamic_slots") if "dynamic_slots" in cab else []
+	var dyn_btn_states: Dictionary = cab.get("dynamic_button_states") if "dynamic_button_states" in cab else {}
+	var dyn_pot_values: Dictionary = cab.get("dynamic_pot_values") if "dynamic_pot_values" in cab else {}
+	var ir_addr := int(cab.get_meta("modbus_input_reg", -1))
+	var dyn_in_idx := 0
+	var dyn_out_idx := 0
+	var dyn_ir_idx := 0
+	for slot_item in dyn_slots:
+		if not (slot_item is Dictionary):
+			continue
+		var mkind := str(slot_item.get("kind", "lamp"))
+		var io_id := str(slot_item.get("io_id", ""))
+		var lbl := str(slot_item.get("label", "MOD"))
+		if mkind == "potentiometer":
+			var p_val := clampf(float(dyn_pot_values.get(io_id, slot_item.get("value", 0.0))), 0.0, 1.0)
+			var cur_ir := ir_addr + dyn_ir_idx if ir_addr >= 0 else -1
+			items.append({
+				"key": "dyn_" + io_id,
+				"label": "◎ " + lbl,
+				"dir": "input_reg",
+				"addr": cur_ir,
+				"addr_text": _format_word_address(cur_ir, "IW") if cur_ir >= 0 else "-",
+				"status_text": "%d%% (%.1fV)" % [roundi(p_val * 100.0), p_val * 10.0],
+				"active": p_val > 0.0,
+				"forced": false,
+			})
+			dyn_ir_idx += 1
+		elif mkind == "switch_3pos":
+			var pos := int(dyn_btn_states.get(io_id, 1))
+			var pos_names := ["LEFT", "CENTER", "RIGHT"]
+			var addr_txt := "-"
+			if i_addr >= 0:
+				addr_txt = "%s/%s" % [_format_iec_address(i_addr + 3 + dyn_in_idx, "IX"), _format_iec_address(i_addr + 4 + dyn_in_idx, "IX")]
+			items.append({
+				"key": "dyn_" + io_id,
+				"label": "❖ " + lbl,
+				"dir": "input",
+				"addr": i_addr + 3 + dyn_in_idx if i_addr >= 0 else -1,
+				"addr_text": addr_txt,
+				"status_text": pos_names[clampi(pos, 0, 2)],
+				"active": pos != 1,
+				"forced": false,
+			})
+			dyn_in_idx += 2
+		elif mkind in ["push_button", "button", "switch_select"]:
+			var icon := "◈ " if mkind == "switch_select" else "■ "
+			items.append({
+				"key": "dyn_" + io_id,
+				"label": icon + lbl,
+				"dir": "input",
+				"addr": i_addr + 3 + dyn_in_idx if i_addr >= 0 else -1,
+				"active": bool(dyn_btn_states.get(io_id, false)),
+				"forced": false,
+			})
+			dyn_in_idx += 1
+		else:
+			var lamp_key := "dyn_" + io_id
+			var l_forced := forced_map.has(lamp_key)
+			var lamp_on := bool(forced_map[lamp_key]) if l_forced else (ModbusTCP.get_coil(c_addr + 3 + dyn_out_idx) if c_addr >= 0 else false)
+			items.append({
+				"key": lamp_key,
+				"label": "● " + lbl,
+				"dir": "coil",
+				"addr": c_addr + 3 + dyn_out_idx if c_addr >= 0 else -1,
+				"active": lamp_on,
+				"forced": l_forced,
+			})
+			dyn_out_idx += 1
+	return items
+
+
+func _collect_tank_status_items(tank: Node3D) -> Array[Dictionary]:
+	var c_addr := int(tank.get_meta("modbus_coil", -1))
+	var i_addr := int(tank.get_meta("modbus_input", -1))
+	var ir_addr := int(tank.get_meta("modbus_input_reg", -1))
+	var pump_on := bool(tank.get("active"))
+	var forced_pump := tank.has_meta("forced_active")
+	var v_open := bool(tank.get("valve_open"))
+	var v_pct := roundi(float(tank.get("valve_opening")) * 100.0)
+	return [
+		{
+			"key": "pump",
+			"label": "Pump (DO)",
+			"dir": "coil",
+			"addr": c_addr,
+			"active": pump_on,
+			"forced": forced_pump,
+		},
+		{
+			"key": "low",
+			"label": "Low Level",
+			"dir": "input",
+			"addr": i_addr + 0 if i_addr >= 0 else -1,
+			"active": bool(tank.get("low_level")),
+			"forced": false,
+		},
+		{
+			"key": "mid",
+			"label": "Mid Level",
+			"dir": "input",
+			"addr": i_addr + 1 if i_addr >= 0 else -1,
+			"active": bool(tank.get("mid_level")),
+			"forced": false,
+		},
+		{
+			"key": "high",
+			"label": "High Level",
+			"dir": "input",
+			"addr": i_addr + 2 if i_addr >= 0 else -1,
+			"active": bool(tank.get("high_level")),
+			"forced": false,
+		},
+		{
+			"key": "level",
+			"label": "Level % (IR)",
+			"dir": "input_reg",
+			"addr": ir_addr,
+			"addr_text": _format_word_address(ir_addr, "IW") if ir_addr >= 0 else "-",
+			"active": int(tank.get("level_percent")) > 0,
+			"forced": false,
+			"status_text": "%d%%" % int(tank.get("level_percent")),
+		},
+		{
+			"key": "valve",
+			"label": "Outlet Valve",
+			"dir": "input",
+			"addr": -1,
+			"active": v_open and v_pct > 0,
+			"forced": false,
+			"status_text": ("OPEN %d%%" % v_pct) if v_open else "CLOSED",
+		},
+	]
+
+
+func _collect_group_status_items(obj: Node3D) -> Array[Dictionary]:
+	var kind := str(obj.get_meta("kind", ""))
+	if kind == "cabinet":
+		return _collect_cabinet_status_items(obj)
+	if kind == "water_tank":
+		return _collect_tank_status_items(obj)
+	return []
+
+
 func _refresh_io_status_list() -> void:
 	if (
 		not is_instance_valid(io_status_list)
@@ -1966,11 +2439,23 @@ func _refresh_io_status_list() -> void:
 	):
 		return
 	var equipment: Array[Node3D] = []
+	var group_items_cache: Dictionary = {}
+	var sig_parts: Array[String] = []
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var obj_kind := str(obj.get_meta("kind", ""))
 		if obj_kind not in PRODUCT_KINDS and obj_kind not in PROP_KINDS:
 			equipment.append(obj as Node3D)
-	if io_status_rows.size() != equipment.size() + CABINET_IO_DEFS.size():
+			if obj_kind in ["cabinet", "water_tank"]:
+				var grp_id := obj.get_instance_id()
+				var expanded := bool(io_status_expanded_cabinets.get(grp_id, true))
+				var grp_items := _collect_group_status_items(obj as Node3D)
+				group_items_cache[grp_id] = grp_items
+				sig_parts.append("%d:%s:%d" % [grp_id, "1" if expanded else "0", grp_items.size()])
+			else:
+				sig_parts.append(str(obj.get_instance_id()))
+	var new_sig := "|".join(sig_parts)
+	if io_status_signature != new_sig:
+		io_status_signature = new_sig
 		for child in io_status_list.get_children():
 			child.queue_free()
 		io_status_rows.clear()
@@ -1980,39 +2465,8 @@ func _refresh_io_status_list() -> void:
 			h_lbl.add_theme_font_size_override("font_size", 11)
 			h_lbl.add_theme_color_override("font_color", Color("9cb3c4"))
 			io_status_list.add_child(h_lbl)
-		for item in CABINET_IO_DEFS:
-			var io_id: String = item["id"]
-			var c_btn := Button.new()
-			c_btn.text = item["label"]
-			c_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			c_btn.clip_text = true
-			c_btn.custom_minimum_size = Vector2(124, 24)
-			c_btn.add_theme_font_size_override("font_size", 11)
-			c_btn.pressed.connect(
-				func():
-					var cab := _get_cabinet_node()
-					if is_instance_valid(cab):
-						_set_selection(cab),
-			)
-			io_status_list.add_child(c_btn)
-
-			var c_coil := Label.new()
-			c_coil.custom_minimum_size.x = 52
-			c_coil.add_theme_font_size_override("font_size", 11)
-			io_status_list.add_child(c_coil)
-
-			var c_input := Label.new()
-			c_input.custom_minimum_size.x = 52
-			c_input.add_theme_font_size_override("font_size", 11)
-			io_status_list.add_child(c_input)
-
-			var c_state := Label.new()
-			c_state.custom_minimum_size.x = 64
-			c_state.add_theme_font_size_override("font_size", 11)
-			io_status_list.add_child(c_state)
-
-			io_status_rows["cab_" + io_id] = [c_btn, c_coil, c_input, c_state]
 		for obj in equipment:
+			var obj_kind := str(obj.get_meta("kind", ""))
 			var btn := Button.new()
 			btn.text = obj.name
 			btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -2022,7 +2476,12 @@ func _refresh_io_status_list() -> void:
 			var target := obj
 			btn.pressed.connect(
 				func():
-					_set_selection(target),
+					if obj_kind in ["cabinet", "water_tank"] and selected_object == target:
+						var cid := target.get_instance_id()
+						io_status_expanded_cabinets[cid] = not bool(io_status_expanded_cabinets.get(cid, true))
+						_refresh_io_status_list()
+					else:
+						_set_selection(target),
 			)
 			io_status_list.add_child(btn)
 
@@ -2042,6 +2501,34 @@ func _refresh_io_status_list() -> void:
 			io_status_list.add_child(state_lbl)
 
 			io_status_rows[obj.get_instance_id()] = [btn, coil_lbl, input_lbl, state_lbl]
+			if obj_kind in ["cabinet", "water_tank"] and bool(io_status_expanded_cabinets.get(obj.get_instance_id(), true)):
+				var cab_items: Array[Dictionary] = group_items_cache.get(obj.get_instance_id(), [])
+				for item in cab_items:
+					var item_btn := Button.new()
+					item_btn.text = "  └ " + str(item["label"])
+					item_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+					item_btn.clip_text = true
+					item_btn.custom_minimum_size = Vector2(124, 22)
+					item_btn.add_theme_font_size_override("font_size", 10)
+					item_btn.pressed.connect(func(): _set_selection(target))
+					io_status_list.add_child(item_btn)
+
+					var c_coil := Label.new()
+					c_coil.custom_minimum_size.x = 52
+					c_coil.add_theme_font_size_override("font_size", 10)
+					io_status_list.add_child(c_coil)
+
+					var c_input := Label.new()
+					c_input.custom_minimum_size.x = 52
+					c_input.add_theme_font_size_override("font_size", 10)
+					io_status_list.add_child(c_input)
+
+					var c_state := Label.new()
+					c_state.custom_minimum_size.x = 92
+					c_state.add_theme_font_size_override("font_size", 10)
+					io_status_list.add_child(c_state)
+
+					io_status_rows["cab_%d_%s" % [obj.get_instance_id(), str(item["key"])]] = [item_btn, c_coil, c_input, c_state]
 	for obj in equipment:
 		var row = io_status_rows.get(obj.get_instance_id())
 		if row == null:
@@ -2051,48 +2538,103 @@ func _refresh_io_status_list() -> void:
 		var input_lbl: Label = row[2]
 		var state_lbl: Label = row[3]
 		var is_selected := is_instance_valid(selected_object) and obj == selected_object
-		var target_text: String = ("▸ " + String(obj.name)) if is_selected else String(obj.name)
-		if btn.text != target_text:
-			btn.text = target_text
+		var kind := str(obj.get_meta("kind", ""))
+		if kind in ["cabinet", "water_tank"]:
+			var expanded := bool(io_status_expanded_cabinets.get(obj.get_instance_id(), true))
+			var grp_title := ("▾ " if expanded else "▸ ") + String(obj.name)
+			if btn.text != grp_title:
+				btn.text = grp_title
+		else:
+			var target_text: String = ("▸ " + String(obj.name)) if is_selected else String(obj.name)
+			if btn.text != target_text:
+				btn.text = target_text
 		var io_col := _object_io_color(obj)
 		_apply_status_btn_style(btn, io_col, is_selected)
-		var kind := str(obj.get_meta("kind", ""))
 		var c_addr := int(obj.get_meta("modbus_coil", -1))
 		var i_addr := int(obj.get_meta("modbus_input", -1))
 		if kind in ["vision_sensor", "rgb_sensor"]:
 			var hr_addr := int(obj.get_meta("modbus_holding_reg", -1))
 			var ir_addr := int(obj.get_meta("modbus_input_reg", -1))
-			coil_lbl.text = "-" if hr_addr < 0 else _format_word_address(hr_addr, "QW")
-			coil_lbl.add_theme_color_override(
-				"font_color",
+			_set_label_if_changed(
+				coil_lbl,
+				"-" if hr_addr < 0 else _format_word_address(hr_addr, "QW"),
 				Color("4fd18b") if hr_addr >= 0 else Color("687c8c"),
 			)
+			var next_in_txt := "-"
 			if i_addr >= 0 and ir_addr >= 0:
-				input_lbl.text = "%s/%s" % [
+				next_in_txt = "%s/%s" % [
 					_format_iec_address(i_addr, "IX"),
 					_format_word_address(ir_addr, "IW"),
 				]
 			elif ir_addr >= 0:
-				input_lbl.text = _format_word_address(ir_addr, "IW")
+				next_in_txt = _format_word_address(ir_addr, "IW")
 			elif i_addr >= 0:
-				input_lbl.text = _format_iec_address(i_addr, "IX")
-			else:
-				input_lbl.text = "-"
-			input_lbl.add_theme_color_override(
-				"font_color",
+				next_in_txt = _format_iec_address(i_addr, "IX")
+			_set_label_if_changed(
+				input_lbl,
+				next_in_txt,
 				Color("f0c44d") if (i_addr >= 0 or ir_addr >= 0) else Color("687c8c"),
 			)
 		else:
-			coil_lbl.text = "-" if c_addr < 0 else _format_iec_address(c_addr, "QX")
-			coil_lbl.add_theme_color_override(
-				"font_color",
+			_set_label_if_changed(
+				coil_lbl,
+				"-" if c_addr < 0 else _format_iec_address(c_addr, "QX"),
 				Color("4fd18b") if c_addr >= 0 else Color("687c8c"),
 			)
-			input_lbl.text = "-" if i_addr < 0 else _format_iec_address(i_addr, "IX")
-			input_lbl.add_theme_color_override(
-				"font_color",
+			_set_label_if_changed(
+				input_lbl,
+				"-" if i_addr < 0 else _format_iec_address(i_addr, "IX"),
 				Color("f0c44d") if i_addr >= 0 else Color("687c8c"),
 			)
+		if kind in ["cabinet", "water_tank"]:
+			var expanded := bool(io_status_expanded_cabinets.get(obj.get_instance_id(), true))
+			var cab_items: Array[Dictionary] = group_items_cache.get(obj.get_instance_id(), [])
+			if expanded:
+				for item in cab_items:
+					var crow = io_status_rows.get("cab_%d_%s" % [obj.get_instance_id(), str(item["key"])])
+					if crow == null:
+						continue
+					var c_btn: Button = crow[0]
+					var c_coil: Label = crow[1]
+					var c_input: Label = crow[2]
+					var c_state: Label = crow[3]
+					var addr := int(item["addr"])
+					var is_coil_io: bool = item["dir"] == "coil"
+					var c_io_col := Color("4fd18b") if (is_coil_io and addr >= 0) else (
+						Color("f0c44d") if (not is_coil_io and addr >= 0) else (
+							Color("4b7a8c") if is_coil_io else Color("8b7d4b")
+						)
+					)
+					_apply_status_btn_style(c_btn, c_io_col, false)
+					var next_cbtn_txt := "  └ " + str(item["label"])
+					if c_btn.text != next_cbtn_txt:
+						c_btn.text = next_cbtn_txt
+					_set_label_if_changed(
+						c_coil,
+						_format_iec_address(addr, "QX") if (is_coil_io and addr >= 0) else "-",
+						Color("4fd18b") if (is_coil_io and addr >= 0) else Color("687c8c"),
+					)
+					_set_label_if_changed(
+						c_input,
+						str(item["addr_text"]) if item.has("addr_text") else (_format_iec_address(addr, "IX") if (not is_coil_io and addr >= 0) else "-"),
+						Color("f0c44d") if (not is_coil_io and addr >= 0) else Color("687c8c"),
+					)
+					var c_active := bool(item["active"])
+					var c_forced := bool(item.get("forced", false))
+					var default_state := "ACTIVE" if c_active else "DEACTIVE"
+					var next_cstate_txt := ("FORCED ON" if c_active else "FORCED OFF") if c_forced else str(item.get("status_text", default_state))
+					var next_cstate_col := Color("f7d070") if c_forced else (Color("66e0a3") if c_active else Color("8aa0b0"))
+					_set_label_if_changed(c_state, next_cstate_txt, next_cstate_col)
+			var grp_state_txt := (
+				"%d%% L%d M%d H%d" % [
+					int(obj.get("level_percent")),
+					1 if bool(obj.get("low_level")) else 0,
+					1 if bool(obj.get("mid_level")) else 0,
+					1 if bool(obj.get("high_level")) else 0,
+				]
+			) if kind == "water_tank" else ("%d ITEMS" % cab_items.size())
+			_set_label_if_changed(state_lbl, grp_state_txt, Color("9cb3c4"))
+			continue
 		var is_active := _is_object_active(obj)
 		var tag := "FORCED" if obj.has_meta("forced_active") else (
 			"ACTIVE" if is_active else "DEACTIVE"
@@ -2106,53 +2648,29 @@ func _refresh_io_status_list() -> void:
 			const RGB_NAMES := ["NONE", "ORANGE", "GREEN", "BLUE", "YELLOW", "RED", "PURPLE"]
 			var col_name: String = RGB_NAMES[col_id] if col_id >= 0 and col_id < RGB_NAMES.size() else "NONE"
 			tag = "ID:%d %s" % [col_id, col_name]
-		state_lbl.text = tag
+		elif kind == "water_tank" and not obj.has_meta("forced_active"):
+			tag = "%d%% L%d M%d H%d" % [
+				int(obj.get("level_percent")),
+				1 if bool(obj.get("low_level")) else 0,
+				1 if bool(obj.get("mid_level")) else 0,
+				1 if bool(obj.get("high_level")) else 0,
+			]
 		var col := Color("f7d070") if obj.has_meta("forced_active") else (
 			Color("66e0a3") if is_active else Color("8aa0b0")
 		)
-		state_lbl.add_theme_color_override("font_color", col)
-	for item in CABINET_IO_DEFS:
-		var io_id: String = item["id"]
-		var row = io_status_rows.get("cab_" + io_id)
-		if row == null:
-			continue
-		var btn: Button = row[0]
-		var coil_lbl: Label = row[1]
-		var input_lbl: Label = row[2]
-		var state_lbl: Label = row[3]
-		var addr := int(cabinet_io_addrs.get(io_id, -1))
-		var is_coil_io: bool = item["dir"] == "coil"
-		var io_col := Color("4fd18b") if (is_coil_io and addr >= 0) else (
-			Color("f0c44d") if (not is_coil_io and addr >= 0) else (
-				Color("4b7a8c") if is_coil_io else Color("8b7d4b")
-			)
-		)
-		_apply_status_btn_style(btn, io_col, false)
-		coil_lbl.text = _format_iec_address(addr, "QX") if (is_coil_io and addr >= 0) else "-"
-		coil_lbl.add_theme_color_override(
-			"font_color",
-			Color("4fd18b") if (is_coil_io and addr >= 0) else Color("687c8c"),
-		)
-		input_lbl.text = _format_iec_address(addr, "IX") if (not is_coil_io and addr >= 0) else "-"
-		input_lbl.add_theme_color_override(
-			"font_color",
-			Color("f0c44d") if (not is_coil_io and addr >= 0) else Color("687c8c"),
-		)
-		var is_active := _get_cabinet_io_active(io_id)
-		state_lbl.text = "ACTIVE" if is_active else "DEACTIVE"
-		state_lbl.add_theme_color_override(
-			"font_color",
-			Color("66e0a3") if is_active else Color("8aa0b0"),
-		)
+		_set_label_if_changed(state_lbl, tag, col)
 
 
 func _build_force_panel(ui_root: Control) -> void:
 	force_panel = PanelContainer.new()
 	force_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	force_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	force_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	force_panel.offset_left = -280
 	force_panel.offset_top = -155
 	force_panel.offset_right = -16
 	force_panel.offset_bottom = -46
+	force_panel.custom_minimum_size = Vector2(264, 0)
 	var style := _ui_stylebox(Color(0.063, 0.098, 0.137, 0.92), Color("294052"), 12, 1, 12, 12)
 	style.shadow_color = Color(0, 0, 0, 0.35)
 	style.shadow_size = 8
@@ -2169,6 +2687,12 @@ func _build_force_panel(ui_root: Control) -> void:
 	force_title.add_theme_font_size_override("font_size", 14)
 	force_title.add_theme_color_override("font_color", Color("eef7fa"))
 	vbox.add_child(force_title)
+
+	force_item_option = OptionButton.new()
+	force_item_option.visible = false
+	force_item_option.add_theme_font_size_override("font_size", 11)
+	force_item_option.item_selected.connect(func(_idx: int): _refresh_force_panel())
+	vbox.add_child(force_item_option)
 
 	force_status_label = Label.new()
 	force_status_label.text = "Status: DEACTIVE"
@@ -2207,6 +2731,118 @@ func _build_force_panel(ui_root: Control) -> void:
 	)
 	btn_row.add_child(force_clear_button)
 
+	var tank_ui := _create_tank_sim_box()
+	tank_force_box = tank_ui["box"]
+	tank_force_sensors_label = tank_ui["sensors_label"]
+	tank_force_valve_btn = tank_ui["valve_btn"]
+	tank_force_valve_slider = tank_ui["valve_slider"]
+	tank_force_valve_pct_label = tank_ui["pct_label"]
+	vbox.add_child(tank_force_box)
+
+
+func _create_tank_sim_box() -> Dictionary:
+	var box := VBoxContainer.new()
+	box.visible = false
+	box.add_theme_constant_override("separation", 6)
+
+	var sep := HSeparator.new()
+	box.add_child(sep)
+
+	var sensors_lbl := Label.new()
+	sensors_lbl.text = "Level: 25% | L:1 M:0 H:0"
+	sensors_lbl.add_theme_font_size_override("font_size", 12)
+	sensors_lbl.add_theme_color_override("font_color", Color("7de8ff"))
+	box.add_child(sensors_lbl)
+
+	var valve_btn := Button.new()
+	valve_btn.text = "Outlet Valve: CLOSED"
+	valve_btn.pressed.connect(
+		func():
+			if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "water_tank":
+				var next_open := not bool(selected_object.get("valve_open"))
+				selected_object.set("valve_open", next_open)
+				_refresh_force_panel()
+				_refresh_transform_controls()
+				_save_layout(true),
+	)
+	box.add_child(valve_btn)
+
+	var slider_row := HBoxContainer.new()
+	slider_row.add_theme_constant_override("separation", 6)
+	box.add_child(slider_row)
+
+	var open_lbl := Label.new()
+	open_lbl.text = "Opening:"
+	open_lbl.add_theme_font_size_override("font_size", 11)
+	open_lbl.add_theme_color_override("font_color", Color("9cb3c4"))
+	slider_row.add_child(open_lbl)
+
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 5.0
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(
+		func(val: float):
+			if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "water_tank":
+				selected_object.set("valve_opening", val / 100.0)
+				_refresh_tank_sim_box(selected_object, sensors_lbl, valve_btn, slider, slider_row.get_child(2) as Label)
+				_save_layout(true),
+	)
+	slider_row.add_child(slider)
+
+	var pct_lbl := Label.new()
+	pct_lbl.text = "100%"
+	pct_lbl.custom_minimum_size.x = 38
+	pct_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct_lbl.add_theme_font_size_override("font_size", 11)
+	slider_row.add_child(pct_lbl)
+
+	return {
+		"box": box,
+		"sensors_label": sensors_lbl,
+		"valve_btn": valve_btn,
+		"valve_slider": slider,
+		"pct_label": pct_lbl,
+	}
+
+
+func _refresh_tank_sim_box(
+	tank: Node3D,
+	sensors_lbl: Label,
+	valve_btn: Button,
+	slider: HSlider,
+	pct_lbl: Label,
+) -> void:
+	if not is_instance_valid(tank):
+		return
+	var lvl := int(tank.get("level_percent"))
+	var low_on := bool(tank.get("low_level"))
+	var mid_on := bool(tank.get("mid_level"))
+	var high_on := bool(tank.get("high_level"))
+	var sensors_txt := "Level: %d%%  |  L:%s  M:%s  H:%s" % [
+		lvl,
+		"ON" if low_on else "OFF",
+		"ON" if mid_on else "OFF",
+		"ON" if high_on else "OFF",
+	]
+	_set_label_if_changed(sensors_lbl, sensors_txt, Color("ff6b6b") if high_on else Color("7de8ff"))
+	var v_open := bool(tank.get("valve_open"))
+	var v_pct := roundi(float(tank.get("valve_opening")) * 100.0)
+	var btn_txt := "Outlet Valve: OPEN" if v_open else "Outlet Valve: CLOSED"
+	if valve_btn.text != btn_txt:
+		valve_btn.text = btn_txt
+	var v_open_state := 1 if v_open else 0
+	if int(valve_btn.get_meta("_last_valve_open", -1)) != v_open_state:
+		valve_btn.set_meta("_last_valve_open", v_open_state)
+		if v_open:
+			_style_accent_button(valve_btn, "1e6b45", "278758", "3eb87a")
+		else:
+			_style_accent_button(valve_btn, "2b3945", "384a59", "4d6478")
+	if not is_equal_approx(slider.value, float(v_pct)):
+		slider.set_value_no_signal(float(v_pct))
+	_set_label_if_changed(pct_lbl, "%d%%" % v_pct)
+
 
 func _is_object_active(obj: Node3D) -> bool:
 	var kind := str(obj.get_meta("kind", ""))
@@ -2223,9 +2859,18 @@ func _set_object_force(obj: Node3D, value: bool) -> void:
 	var kind := str(obj.get_meta("kind", "")) if is_instance_valid(obj) else ""
 	if not is_instance_valid(obj) or kind in PRODUCT_KINDS or kind in PROP_KINDS:
 		return
+	if kind == "cabinet" and is_instance_valid(force_item_option) and force_item_option.selected >= 0:
+		var item_key := str(force_item_option.get_item_metadata(force_item_option.selected))
+		if not item_key.is_empty():
+			obj.call("set_item_force", item_key, value)
+			_refresh_force_panel()
+			_refresh_io_status_list()
+			_refresh_cabinet_hud()
+			return
 	obj.set_meta("forced_active", value)
 	_apply_object_force(obj, value)
 	_refresh_boxes_freeze()
+	_refresh_cabinet_hud()
 	if not test_mode and is_inside_tree():
 		_save_settings()
 	_refresh_force_panel()
@@ -2234,9 +2879,17 @@ func _set_object_force(obj: Node3D, value: bool) -> void:
 func _clear_object_force(obj: Node3D) -> void:
 	if not is_instance_valid(obj):
 		return
+	var kind := str(obj.get_meta("kind", ""))
+	if kind == "cabinet" and is_instance_valid(force_item_option) and force_item_option.selected >= 0:
+		var item_key := str(force_item_option.get_item_metadata(force_item_option.selected))
+		if not item_key.is_empty():
+			obj.call("clear_item_force", item_key)
+			_refresh_force_panel()
+			_refresh_io_status_list()
+			_refresh_cabinet_hud()
+			return
 	if obj.has_meta("forced_active"):
 		obj.remove_meta("forced_active")
-	var kind := str(obj.get_meta("kind", ""))
 	if kind in ["pusher", "stopper", "emitter", "remover", "cabinet", "stack_light", "motor_fan", "pump", "water_tank", "solenoid_valve", "reject_bin"]:
 		obj.set("plc_mode", plc_mode)
 		if not plc_mode:
@@ -2246,10 +2899,11 @@ func _clear_object_force(obj: Node3D) -> void:
 		if area != null:
 			area.set("plc_mode", plc_mode)
 			if not plc_mode:
-				area.set("active", running)
+				area.set("active", false)
 	elif kind in ["conveyor", "conveyor_short"] and obj is StaticBody3D:
 		_apply_conveyor_speed(obj as StaticBody3D)
 	_refresh_boxes_freeze()
+	_refresh_cabinet_hud()
 	if not test_mode and is_inside_tree():
 		_save_settings()
 	_refresh_force_panel()
@@ -2303,26 +2957,125 @@ func _refresh_force_panel() -> void:
 	)
 	force_panel.visible = show_force
 	if not show_force:
+		_force_panel_layout_sig = ""
 		return
-	force_title.text = "FORCE: " + selected_object.name
+	_set_label_if_changed(force_title, "FORCE: " + selected_object.name)
+	var is_cab := sel_kind == "cabinet"
+	if is_instance_valid(force_item_option):
+		force_item_option.visible = is_cab
+	if is_cab:
+		var cab_items: Array[Dictionary] = []
+		for it in _collect_cabinet_status_items(selected_object):
+			if str(it.get("dir", "")) == "coil":
+				cab_items.append(it)
+		if cab_items.is_empty():
+			force_panel.visible = false
+			_force_panel_layout_sig = ""
+			return
+		var sig_parts: Array[String] = [str(selected_object.get_instance_id())]
+		for it in cab_items:
+			sig_parts.append("%s:%s" % [str(it["key"]), str(it["label"])])
+		var new_sig := "|".join(sig_parts)
+		if _force_item_sig != new_sig:
+			_force_item_sig = new_sig
+			var prev_key := ""
+			if force_item_option.selected >= 0 and force_item_option.selected < force_item_option.item_count:
+				prev_key = str(force_item_option.get_item_metadata(force_item_option.selected))
+			force_item_option.clear()
+			var sel_idx := 0
+			for idx in range(cab_items.size()):
+				var it := cab_items[idx]
+				force_item_option.add_item(str(it["label"]), idx)
+				force_item_option.set_item_metadata(idx, str(it["key"]))
+				if str(it["key"]) == prev_key:
+					sel_idx = idx
+			if cab_items.size() > 0:
+				force_item_option.select(sel_idx)
+		if cab_items.size() > 0:
+			var cur_idx := clampi(force_item_option.selected, 0, cab_items.size() - 1)
+			var cur_item := cab_items[cur_idx]
+			var cur_key := str(cur_item["key"])
+			var forced_map: Dictionary = selected_object.get("forced_items") if "forced_items" in selected_object else {}
+			if forced_map.has(cur_key):
+				var f_val := bool(forced_map[cur_key])
+				_set_label_if_changed(force_status_label, "Status: FORCED ON" if f_val else "Status: FORCED OFF", Color("f7d070"))
+			else:
+				var it_active := bool(cur_item["active"])
+				_set_label_if_changed(force_status_label, "Status: ACTIVE" if it_active else "Status: DEACTIVE", Color("66e0a3") if it_active else Color("9cb3c4"))
+			force_on_button.disabled = false
+			force_off_button.disabled = false
+			force_clear_button.disabled = not forced_map.has(cur_key)
+		else:
+			_set_label_if_changed(force_status_label, "No items on cabinet", Color("9cb3c4"))
+			force_on_button.disabled = true
+			force_off_button.disabled = true
+			force_clear_button.disabled = true
+		if is_instance_valid(tank_force_box):
+			tank_force_box.visible = false
+		var cab_layout_sig := "cab:%s" % new_sig
+		if _force_panel_layout_sig != cab_layout_sig:
+			_force_panel_layout_sig = cab_layout_sig
+			_fit_force_panel()
+			_fit_force_panel.call_deferred()
+		return
 	var is_active := _is_object_active(selected_object)
 	if selected_object.has_meta("forced_active"):
 		var f_val := bool(selected_object.get_meta("forced_active"))
-		force_status_label.text = "Status: FORCED ON" if f_val else "Status: FORCED OFF"
-		force_status_label.add_theme_color_override("font_color", Color("f7d070"))
+		_set_label_if_changed(force_status_label, "Status: FORCED ON" if f_val else "Status: FORCED OFF", Color("f7d070"))
 	else:
-		force_status_label.text = "Status: ACTIVE" if is_active else "Status: DEACTIVE"
-		force_status_label.add_theme_color_override(
-			"font_color",
+		_set_label_if_changed(
+			force_status_label,
+			"Status: ACTIVE" if is_active else "Status: DEACTIVE",
 			Color("66e0a3") if is_active else Color("9cb3c4"),
 		)
 	force_on_button.disabled = false
 	force_off_button.disabled = false
 	force_clear_button.disabled = not selected_object.has_meta("forced_active")
+	var is_tank := sel_kind == "water_tank"
+	if is_instance_valid(tank_force_box):
+		tank_force_box.visible = is_tank
+		if is_tank:
+			_refresh_tank_sim_box(
+				selected_object,
+				tank_force_sensors_label,
+				tank_force_valve_btn,
+				tank_force_valve_slider,
+				tank_force_valve_pct_label,
+			)
+			if force_on_button.text != "Pump ON":
+				force_on_button.text = "Pump ON"
+			if force_off_button.text != "Pump OFF":
+				force_off_button.text = "Pump OFF"
+		else:
+			if force_on_button.text != "Force ON":
+				force_on_button.text = "Force ON"
+			if force_off_button.text != "Force OFF":
+				force_off_button.text = "Force OFF"
+	var layout_sig := "%d:%s:%d" % [selected_object.get_instance_id(), sel_kind, 1 if is_tank else 0]
+	if _force_panel_layout_sig != layout_sig:
+		_force_panel_layout_sig = layout_sig
+		_fit_force_panel()
+		_fit_force_panel.call_deferred()
 
 
-var _object_thumb_viewports: Array[SubViewport] = []
+func _fit_force_panel() -> void:
+	_fit_bottom_right_panel(force_panel, 264.0)
+
+
+func _fit_bottom_right_panel(panel: PanelContainer, min_width: float) -> void:
+	if not is_instance_valid(panel):
+		return
+	var min_sz := panel.get_combined_minimum_size()
+	var w := maxf(min_sz.x, min_width)
+	panel.offset_right = -16.0
+	panel.offset_left = -16.0 - w
+	panel.offset_bottom = -46.0
+	panel.offset_top = -46.0 - min_sz.y
+
+
+var _object_thumb_requests: Array[Dictionary] = []
 var _object_thumbs_rendered: bool = false
+var _object_thumbs_rendering: bool = false
 
 
 func _set_object_dialog_visible(visible_state: bool) -> void:
@@ -2330,11 +3083,9 @@ func _set_object_dialog_visible(visible_state: bool) -> void:
 		object_dialog_backdrop.visible = visible_state
 	if is_instance_valid(object_dialog):
 		object_dialog.visible = visible_state
-	if visible_state and not _object_thumbs_rendered:
+	if visible_state and not _object_thumbs_rendered and not _object_thumbs_rendering:
 		_object_thumbs_rendered = true
-		for vp in _object_thumb_viewports:
-			if is_instance_valid(vp):
-				vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		_bake_object_thumbnails_async()
 
 
 func _create_object_thumbnail(kind: String) -> Control:
@@ -2346,60 +3097,475 @@ func _create_object_thumbnail(kind: String) -> Control:
 		_ui_stylebox(Color(0.04, 0.07, 0.10, 0.9), Color("284357"), 6, 1, 2, 2),
 	)
 
-	var svc := SubViewportContainer.new()
-	svc.stretch = true
-	svc.custom_minimum_size = Vector2(64, 64)
-	svc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(svc)
-
-	var vp := SubViewport.new()
-	vp.size = Vector2i(96, 96)
-	vp.own_world_3d = true
-	vp.transparent_bg = true
-	vp.msaa_3d = SubViewport.MSAA_2X
-	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	svc.add_child(vp)
-	_object_thumb_viewports.append(vp)
-
-	var env := Environment.new()
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.62, 0.68, 0.76)
-	env.ambient_light_energy = 1.25
-	var we := WorldEnvironment.new()
-	we.environment = env
-	vp.add_child(we)
-
-	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
-	light.light_energy = 1.2
-	vp.add_child(light)
-
-	var packed := load("res://objects/" + kind + ".tscn") as PackedScene
-	if packed != null:
-		var inst := packed.instantiate() as Node3D
-		inst.process_mode = Node.PROCESS_MODE_DISABLED
-		vp.add_child(inst)
-
-	var fp := _footprint(kind, 0.0)
-	var hr := _height_range(kind, 0.0)
-	var center_y := (hr.x + hr.y) * 0.5
-	if kind in PRODUCT_KINDS:
-		center_y = 0.32 if kind == "box" else 0.16
-	elif kind in ["conveyor", "conveyor_short", "turn"]:
-		center_y = 0.72
-	var span := maxf(maxf(fp.x, fp.y), hr.y - hr.x)
-	var cam_dist := clampf(span * 1.15, 1.35, 7.2)
-	if kind == "conveyor":
-		cam_dist = 6.2
-	elif kind == "conveyor_short":
-		cam_dist = 3.1
-	var cam := Camera3D.new()
-	cam.fov = 38.0
-	var cam_pos := Vector3(cam_dist * 0.72, center_y + cam_dist * 0.55, cam_dist * 0.78)
-	vp.add_child(cam)
-	cam.look_at_from_position(cam_pos, Vector3(0.0, center_y, 0.0), Vector3.UP)
-
+	var tex_rect := TextureRect.new()
+	tex_rect.custom_minimum_size = Vector2(64, 64)
+	tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(tex_rect)
+	_object_thumb_requests.append({"kind": kind, "rect": tex_rect})
 	return frame
+
+
+func _bake_object_thumbnails_async() -> void:
+	if _object_thumbs_rendering or _object_thumb_requests.is_empty():
+		return
+	if DisplayServer.get_name() == "headless" or not is_inside_tree():
+		return
+	_object_thumbs_rendering = true
+
+	const BATCH_SIZE := 4
+	var host := Node.new()
+	host.name = "_ThumbBakeHost"
+	add_child(host)
+
+	var vps: Array[SubViewport] = []
+	var cams: Array[Camera3D] = []
+	for i in range(BATCH_SIZE):
+		var vp := SubViewport.new()
+		vp.size = Vector2i(96, 96)
+		vp.own_world_3d = true
+		vp.transparent_bg = true
+		vp.msaa_3d = SubViewport.MSAA_2X
+		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		host.add_child(vp)
+
+		var env := Environment.new()
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color(0.62, 0.68, 0.76)
+		env.ambient_light_energy = 1.25
+		var we := WorldEnvironment.new()
+		we.environment = env
+		vp.add_child(we)
+
+		var light := DirectionalLight3D.new()
+		light.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
+		light.light_energy = 1.2
+		vp.add_child(light)
+
+		var cam := Camera3D.new()
+		cam.fov = 38.0
+		vp.add_child(cam)
+
+		vps.append(vp)
+		cams.append(cam)
+
+	var idx := 0
+	while idx < _object_thumb_requests.size():
+		if not is_instance_valid(self) or not is_inside_tree() or not is_instance_valid(host):
+			break
+		var batch_items: Array[Dictionary] = []
+		var insts: Array[Node3D] = []
+		for b in range(BATCH_SIZE):
+			if idx >= _object_thumb_requests.size():
+				break
+			var req: Dictionary = _object_thumb_requests[idx]
+			idx += 1
+			var kind := str(req["kind"])
+			var vp := vps[b]
+			var cam := cams[b]
+			var inst: Node3D = null
+			var packed := load("res://objects/" + kind + ".tscn") as PackedScene
+			if packed != null:
+				inst = packed.instantiate() as Node3D
+				inst.process_mode = Node.PROCESS_MODE_DISABLED
+				vp.add_child(inst)
+			var fp := _footprint(kind, 0.0)
+			var hr := _height_range(kind, 0.0)
+			var center_y := (hr.x + hr.y) * 0.5
+			if kind in PRODUCT_KINDS:
+				center_y = 0.32 if kind == "box" else 0.16
+			elif kind in ["conveyor", "conveyor_short", "turn"]:
+				center_y = 0.72
+			var span := maxf(maxf(fp.x, fp.y), hr.y - hr.x)
+			var cam_dist := clampf(span * 1.15, 1.35, 7.2)
+			if kind == "conveyor":
+				cam_dist = 6.2
+			elif kind == "conveyor_short":
+				cam_dist = 3.1
+			var cam_pos := Vector3(cam_dist * 0.72, center_y + cam_dist * 0.55, cam_dist * 0.78)
+			cam.look_at_from_position(cam_pos, Vector3(0.0, center_y, 0.0), Vector3.UP)
+			vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+			batch_items.append(req)
+			insts.append(inst)
+
+		await RenderingServer.frame_post_draw
+		if not is_instance_valid(self) or not is_inside_tree():
+			break
+		for b in range(batch_items.size()):
+			var vp := vps[b]
+			var rect := batch_items[b]["rect"] as TextureRect
+			if is_instance_valid(vp) and is_instance_valid(rect):
+				var vp_tex := vp.get_texture()
+				var img := vp_tex.get_image() if vp_tex != null else null
+				if img != null and not img.is_empty():
+					rect.texture = ImageTexture.create_from_image(img)
+			var inst := insts[b]
+			if is_instance_valid(inst):
+				if inst.get_parent() != null:
+					inst.get_parent().remove_child(inst)
+				inst.queue_free()
+
+	if is_instance_valid(host):
+		host.queue_free()
+	_object_thumb_requests.clear()
+	_object_thumbs_rendering = false
+
+
+func _set_floor_dialog_visible(show_dialog: bool) -> void:
+	if is_instance_valid(floor_dialog_backdrop):
+		floor_dialog_backdrop.visible = show_dialog
+	if is_instance_valid(floor_dialog):
+		floor_dialog.visible = show_dialog
+	if show_dialog:
+		if is_instance_valid(width_input):
+			width_input.value = workspace_width
+		if is_instance_valid(depth_input):
+			depth_input.value = workspace_depth
+		if is_instance_valid(show_grid_check):
+			show_grid_check.set_pressed_no_signal(show_edit_grid)
+		if is_instance_valid(decor_option):
+			var dkeys := DECOR_THEMES.keys()
+			var didx := dkeys.find(decor_style)
+			if didx >= 0:
+				decor_option.select(didx)
+
+
+func _build_floor_dialog(ui_root: Control) -> void:
+	floor_dialog_backdrop = ColorRect.new()
+	floor_dialog_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	floor_dialog_backdrop.color = Color(0.02, 0.04, 0.06, 0.45)
+	floor_dialog_backdrop.visible = false
+	floor_dialog_backdrop.gui_input.connect(
+		func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_set_floor_dialog_visible(false),
+	)
+	ui_root.add_child(floor_dialog_backdrop)
+
+	floor_dialog = PanelContainer.new()
+	floor_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	floor_dialog.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	floor_dialog.grow_vertical = Control.GROW_DIRECTION_BOTH
+	floor_dialog.custom_minimum_size = Vector2(360, 0)
+	var style := _ui_stylebox(Color(0.063, 0.098, 0.137, 0.96), Color("2f4c63"), 14, 1, 16, 14)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 14
+	floor_dialog.add_theme_stylebox_override("panel", style)
+	floor_dialog.visible = false
+	ui_root.add_child(floor_dialog)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	floor_dialog.add_child(vbox)
+
+	var hdr_row := HBoxContainer.new()
+	vbox.add_child(hdr_row)
+	var hdr := Label.new()
+	hdr.text = "WORKSPACE & ENV SETTINGS"
+	hdr.add_theme_font_size_override("font_size", 14)
+	hdr.add_theme_color_override("font_color", Color("eef7fa"))
+	hdr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hdr_row.add_child(hdr)
+	var close_btn := Button.new()
+	close_btn.text = "×"
+	close_btn.custom_minimum_size = Vector2(28, 26)
+	close_btn.pressed.connect(func(): _set_floor_dialog_visible(false))
+	hdr_row.add_child(close_btn)
+
+	var preset_lbl := Label.new()
+	preset_lbl.text = "Floor Presets"
+	preset_lbl.add_theme_font_size_override("font_size", 11)
+	preset_lbl.add_theme_color_override("font_color", Color("7ea7c2"))
+	vbox.add_child(preset_lbl)
+
+	var preset_row := HBoxContainer.new()
+	preset_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(preset_row)
+	for p in [
+		["Small 16×12", 16, 12],
+		["Med 22×15", 22, 15],
+		["Large 36×24", 36, 24],
+		["XL 50×35", 50, 35],
+	]:
+		var pbtn := Button.new()
+		pbtn.text = p[0]
+		pbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pbtn.add_theme_font_size_override("font_size", 11)
+		var pw: int = p[1]
+		var pd: int = p[2]
+		pbtn.pressed.connect(
+			func():
+				width_input.value = pw
+				depth_input.value = pd
+				_apply_workspace_input(),
+		)
+		preset_row.add_child(pbtn)
+
+	var size_row := HBoxContainer.new()
+	size_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(size_row)
+	var size_title := Label.new()
+	size_title.text = "Size (m):"
+	size_title.custom_minimum_size.x = 74
+	size_row.add_child(size_title)
+	width_input = SpinBox.new()
+	width_input.min_value = 10
+	width_input.max_value = 100
+	width_input.step = 1
+	width_input.value = workspace_width
+	width_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_row.add_child(width_input)
+	var x_label := Label.new()
+	x_label.text = "×"
+	size_row.add_child(x_label)
+	depth_input = SpinBox.new()
+	depth_input.min_value = 10
+	depth_input.max_value = 100
+	depth_input.step = 1
+	depth_input.value = workspace_depth
+	depth_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_row.add_child(depth_input)
+	var apply_size := Button.new()
+	apply_size.text = "Apply"
+	_style_accent_button(apply_size, "1b4f6e", "23668f", "3b8cb8")
+	apply_size.pressed.connect(_apply_workspace_input)
+	size_row.add_child(apply_size)
+
+	vbox.add_child(HSeparator.new())
+
+	var grid_row := HBoxContainer.new()
+	grid_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(grid_row)
+	var g_lbl := Label.new()
+	g_lbl.text = "Grid Snap:"
+	g_lbl.custom_minimum_size.x = 74
+	grid_row.add_child(g_lbl)
+	grid_step_option = OptionButton.new()
+	grid_step_option.add_item("0.25 m", 0)
+	grid_step_option.add_item("0.50 m", 1)
+	grid_step_option.add_item("1.00 m", 2)
+	grid_step_option.select(1)
+	grid_step_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid_step_option.item_selected.connect(
+		func(idx: int):
+			var steps := [0.25, 0.5, 1.0]
+			grid_step = steps[clampi(idx, 0, steps.size() - 1)]
+			_rebuild_grid()
+			_save_settings(),
+	)
+	grid_row.add_child(grid_step_option)
+
+	show_grid_check = CheckBox.new()
+	show_grid_check.text = "Show Grid in Edit Mode"
+	show_grid_check.button_pressed = show_edit_grid
+	show_grid_check.toggled.connect(
+		func(on: bool):
+			show_edit_grid = on
+			if is_instance_valid(edit_grid):
+				edit_grid.visible = edit_mode and show_edit_grid
+			_save_settings(),
+	)
+	vbox.add_child(show_grid_check)
+
+	vbox.add_child(HSeparator.new())
+
+	var env_row := HBoxContainer.new()
+	env_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(env_row)
+	var env_label := Label.new()
+	env_label.text = "Env Theme:"
+	env_label.custom_minimum_size.x = 74
+	env_row.add_child(env_label)
+	decor_option = OptionButton.new()
+	decor_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var theme_keys := DECOR_THEMES.keys()
+	for i in theme_keys.size():
+		var k: String = theme_keys[i]
+		decor_option.add_item(DECOR_THEMES[k]["label"], i)
+	decor_option.item_selected.connect(
+		func(idx: int):
+			var keys := DECOR_THEMES.keys()
+			if idx >= 0 and idx < keys.size():
+				_apply_decor_style(keys[idx]),
+	)
+	env_row.add_child(decor_option)
+
+
+func _set_npc_dialog_visible(show_dialog: bool) -> void:
+	if is_instance_valid(npc_dialog_backdrop):
+		npc_dialog_backdrop.visible = show_dialog
+	if is_instance_valid(npc_dialog):
+		npc_dialog.visible = show_dialog
+	if show_dialog:
+		if is_instance_valid(npc_master_check):
+			npc_master_check.set_pressed_no_signal(npcs_enabled)
+		if is_instance_valid(npc_op_check):
+			npc_op_check.set_pressed_no_signal(npc_operator_enabled)
+		if is_instance_valid(npc_tester_check):
+			npc_tester_check.set_pressed_no_signal(npc_tester_enabled)
+		if is_instance_valid(npc_safety_check):
+			npc_safety_check.set_pressed_no_signal(npc_safety_enabled)
+		if is_instance_valid(npc_chat_check):
+			npc_chat_check.set_pressed_no_signal(npc_chat_enabled)
+		if is_instance_valid(npc_speed_spin):
+			npc_speed_spin.set_value_no_signal(npc_walk_speed)
+		if is_instance_valid(npc_inspect_spin):
+			npc_inspect_spin.set_value_no_signal(npc_inspect_duration)
+
+
+func _build_npc_dialog(ui_root: Control) -> void:
+	npc_dialog_backdrop = ColorRect.new()
+	npc_dialog_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	npc_dialog_backdrop.color = Color(0.02, 0.04, 0.06, 0.45)
+	npc_dialog_backdrop.visible = false
+	npc_dialog_backdrop.gui_input.connect(
+		func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_set_npc_dialog_visible(false),
+	)
+	ui_root.add_child(npc_dialog_backdrop)
+
+	npc_dialog = PanelContainer.new()
+	npc_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	npc_dialog.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	npc_dialog.grow_vertical = Control.GROW_DIRECTION_BOTH
+	npc_dialog.custom_minimum_size = Vector2(340, 0)
+	var style := _ui_stylebox(Color(0.063, 0.098, 0.137, 0.96), Color("2f4c63"), 14, 1, 16, 14)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 14
+	npc_dialog.add_theme_stylebox_override("panel", style)
+	npc_dialog.visible = false
+	ui_root.add_child(npc_dialog)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	npc_dialog.add_child(vbox)
+
+	var hdr_row := HBoxContainer.new()
+	vbox.add_child(hdr_row)
+	var hdr := Label.new()
+	hdr.text = "NPC SETTINGS"
+	hdr.add_theme_font_size_override("font_size", 14)
+	hdr.add_theme_color_override("font_color", Color("eef7fa"))
+	hdr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hdr_row.add_child(hdr)
+	var close_btn := Button.new()
+	close_btn.text = "×"
+	close_btn.custom_minimum_size = Vector2(28, 26)
+	close_btn.pressed.connect(func(): _set_npc_dialog_visible(false))
+	hdr_row.add_child(close_btn)
+
+	npc_master_check = CheckBox.new()
+	npc_master_check.text = "Enable Factory NPCs"
+	npc_master_check.button_pressed = npcs_enabled
+	npc_master_check.toggled.connect(
+		func(on: bool):
+			npcs_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	vbox.add_child(npc_master_check)
+
+	var role_row := HBoxContainer.new()
+	role_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(role_row)
+	npc_op_check = CheckBox.new()
+	npc_op_check.text = "Operator"
+	npc_op_check.button_pressed = npc_operator_enabled
+	npc_op_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_op_check.toggled.connect(
+		func(on: bool):
+			npc_operator_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	role_row.add_child(npc_op_check)
+	npc_tester_check = CheckBox.new()
+	npc_tester_check.text = "Tester"
+	npc_tester_check.button_pressed = npc_tester_enabled
+	npc_tester_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_tester_check.toggled.connect(
+		func(on: bool):
+			npc_tester_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	role_row.add_child(npc_tester_check)
+	npc_safety_check = CheckBox.new()
+	npc_safety_check.text = "Safety"
+	npc_safety_check.button_pressed = npc_safety_enabled
+	npc_safety_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_safety_check.toggled.connect(
+		func(on: bool):
+			npc_safety_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	role_row.add_child(npc_safety_check)
+
+	vbox.add_child(HSeparator.new())
+
+	var spd_row := HBoxContainer.new()
+	spd_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(spd_row)
+	var spd_lbl := Label.new()
+	spd_lbl.text = "Walk Speed:"
+	spd_lbl.custom_minimum_size.x = 120
+	spd_row.add_child(spd_lbl)
+	npc_speed_spin = SpinBox.new()
+	npc_speed_spin.min_value = 0.5
+	npc_speed_spin.max_value = 4.0
+	npc_speed_spin.step = 0.05
+	npc_speed_spin.suffix = " m/s"
+	npc_speed_spin.value = npc_walk_speed
+	npc_speed_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_speed_spin.value_changed.connect(
+		func(val: float):
+			npc_walk_speed = val
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	spd_row.add_child(npc_speed_spin)
+
+	var insp_row := HBoxContainer.new()
+	insp_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(insp_row)
+	var insp_lbl := Label.new()
+	insp_lbl.text = "Inspect Time:"
+	insp_lbl.custom_minimum_size.x = 120
+	insp_row.add_child(insp_lbl)
+	npc_inspect_spin = SpinBox.new()
+	npc_inspect_spin.min_value = 0.5
+	npc_inspect_spin.max_value = 6.0
+	npc_inspect_spin.step = 0.1
+	npc_inspect_spin.suffix = " s"
+	npc_inspect_spin.value = npc_inspect_duration
+	npc_inspect_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_inspect_spin.value_changed.connect(
+		func(val: float):
+			npc_inspect_duration = val
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	insp_row.add_child(npc_inspect_spin)
+
+	npc_chat_check = CheckBox.new()
+	npc_chat_check.text = "NPC Chat Bubbles"
+	npc_chat_check.button_pressed = npc_chat_enabled
+	npc_chat_check.toggled.connect(
+		func(on: bool):
+			npc_chat_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	vbox.add_child(npc_chat_check)
+
+	var reset_btn := Button.new()
+	reset_btn.text = "Reset NPC Positions"
+	_style_accent_button(reset_btn, "1b4f6e", "23668f", "3b8cb8")
+	reset_btn.pressed.connect(_reset_npc_positions)
+	vbox.add_child(reset_btn)
 
 
 func _build_object_dialog(ui_root: Control) -> void:
@@ -2450,6 +3616,16 @@ func _build_object_dialog(ui_root: Control) -> void:
 	heading.add_theme_font_size_override("font_size", 15)
 	heading.add_theme_color_override("font_color", Color("eef7fa"))
 	header.add_child(heading)
+
+	modbus_enabled_check = CheckBox.new()
+	modbus_enabled_check.text = "Enable Modbus"
+	modbus_enabled_check.tooltip_text = "Enable external Modbus TCP (automatically disables Internal Ladder PLC)"
+	modbus_enabled_check.button_pressed = ModbusTCP.enabled
+	modbus_enabled_check.toggled.connect(
+		func(pressed: bool):
+			_set_controller_mode(1 if pressed else 0, true),
+	)
+	header.add_child(modbus_enabled_check)
 
 	var close_btn := Button.new()
 	close_btn.text = "✕"
@@ -2503,7 +3679,7 @@ func _build_object_dialog(ui_root: Control) -> void:
 				["Pneumatic Stopper", "Queue gate before turn", "stopper"],
 				["Motor Fan", "Industrial cooling fan (1 coil)", "motor_fan"],
 				["Centrifugal Pump", "Industrial fluid pump (1 coil)", "pump"],
-				["Water Tank", "Process tank + level sensor", "water_tank"],
+				["Water Tank", "Tank + L/M/H sensors + Pump + Outlet Valve", "water_tank"],
 				["Solenoid Valve", "Electric fluid valve (1 coil)", "solenoid_valve"],
 			],
 		],
@@ -2692,6 +3868,16 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	heading.add_theme_color_override("font_color", Color("eef7fa"))
 	header.add_child(heading)
 
+	modbus_enabled_check = CheckBox.new()
+	modbus_enabled_check.text = "Enable Modbus"
+	modbus_enabled_check.tooltip_text = "Enable external Modbus TCP (automatically disables Internal Ladder PLC)"
+	modbus_enabled_check.button_pressed = ModbusTCP.enabled
+	modbus_enabled_check.toggled.connect(
+		func(pressed: bool):
+			_set_controller_mode(1 if pressed else 0, true),
+	)
+	header.add_child(modbus_enabled_check)
+
 	var close_btn := Button.new()
 	close_btn.text = "✕"
 	close_btn.custom_minimum_size = Vector2(30, 28)
@@ -2762,11 +3948,11 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	modbus_port_input.custom_minimum_size.x = 90
 	srv_row.add_child(modbus_port_input)
 
-	var restart_btn := Button.new()
-	restart_btn.text = "Apply & Restart"
-	_style_accent_button(restart_btn, "1b4f6e", "23668f", "3b8cb8")
-	restart_btn.pressed.connect(_apply_modbus_server_settings)
-	srv_row.add_child(restart_btn)
+	modbus_restart_btn = Button.new()
+	modbus_restart_btn.text = "Apply & Restart"
+	_style_accent_button(modbus_restart_btn, "1b4f6e", "23668f", "3b8cb8")
+	modbus_restart_btn.pressed.connect(_apply_modbus_server_settings)
+	srv_row.add_child(modbus_restart_btn)
 
 	modbus_srv_status = Label.new()
 	modbus_srv_status.add_theme_font_size_override("font_size", 12)
@@ -2820,6 +4006,286 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	footer.add_child(done_btn)
 
 
+func _set_controller_mode(mode_idx: int, save_cfg: bool = true) -> void:
+	# 0 = OFF, 1 = Modbus, 2 = Ladder
+	var want_modbus := mode_idx == 1
+	var want_ladder := mode_idx == 2
+	var want_plc := want_modbus or want_ladder
+	soft_plc.enabled = want_ladder
+	ModbusTCP.enabled = want_modbus
+	if plc_mode != want_plc:
+		_apply_plc_mode(want_plc, false)
+	if want_ladder:
+		_apply_ladder_code(false)
+	if is_instance_valid(plc_controller_option):
+		plc_controller_option.select(clampi(mode_idx, 0, 2))
+	if is_instance_valid(modbus_enabled_check):
+		modbus_enabled_check.set_pressed_no_signal(want_modbus)
+	if is_instance_valid(ladder_enabled_check):
+		ladder_enabled_check.set_pressed_no_signal(want_ladder)
+	_refresh_modbus_dialog()
+	_refresh_ladder_watch()
+	if save_cfg:
+		_save_settings()
+
+
+func _set_ladder_dialog_visible(visible_state: bool) -> void:
+	if visible_state:
+		if is_instance_valid(ladder_enabled_check):
+			ladder_enabled_check.set_pressed_no_signal(soft_plc.enabled)
+		if is_instance_valid(ladder_code_edit) and ladder_code_edit.text.strip_edges().is_empty() and not soft_plc.source_code.is_empty():
+			ladder_code_edit.text = soft_plc.source_code
+		_refresh_ladder_watch()
+	if is_instance_valid(ladder_dialog_backdrop):
+		ladder_dialog_backdrop.visible = visible_state
+	if is_instance_valid(ladder_dialog):
+		ladder_dialog.visible = visible_state
+
+
+func _get_ladder_presets() -> Dictionary:
+	var tank_low := "%IX0.0"
+	var tank_high := "%IX0.2"
+	var tank_pump := "%QX0.0"
+	var tank_iw := "%IW0"
+	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
+		if str(obj.get_meta("kind", "")) == "water_tank":
+			var in_a := int(obj.get_meta("modbus_input", -1))
+			var co_a := int(obj.get_meta("modbus_coil", -1))
+			var ir_a := int(obj.get_meta("modbus_input_reg", -1))
+			if in_a >= 0:
+				tank_low = _format_iec_address(in_a, "IX")
+				tank_high = _format_iec_address(in_a + 2, "IX")
+			if co_a >= 0:
+				tank_pump = _format_iec_address(co_a, "QX")
+			if ir_a >= 0:
+				tank_iw = _format_word_address(ir_a, "IW")
+			break
+	return {
+		"Auto Water Tank (Low/High)": """// Auto Water Tank: Pump ON below Low (%s=0), OFF at High (%s=1)
+LDN %s
+OR %%MX0.0
+ANDN %s
+ST %%MX0.0
+ST %s
+""" % [tank_low, tank_high, tank_low, tank_high, tank_pump],
+		"Conveyor Start/Stop Latch": """// Start (%IX0.0) / Stop NC (%IX0.1) -> Conveyor (%QX0.0)
+LD %IX0.0
+OR %QX0.0
+ANDN %IX0.1
+ST %QX0.0
+""",
+		"Timer TON Pulse (2s)": """// Sensor %IX0.0 triggers Output %QX0.0 after 2.0s delay
+LD %IX0.0
+TON T0 2.0s
+ST %QX0.0
+""",
+		"Counter CTU (5 items)": """// Count 5 rising edges on %IX0.0 -> %QX0.0 ON; %IX0.1 resets C0
+LD %IX0.0
+CTU C0 5
+ST %QX0.0
+LD %IX0.1
+RST C0
+""",
+		"Tank Analog Compare (>80%)": """// Turn on %s when %s > 80
+LD_GT %s 80
+ST %s
+""" % [tank_pump, tank_iw, tank_iw, tank_pump],
+	}
+
+
+func _build_ladder_dialog(ui_root: Control) -> void:
+	ladder_dialog_backdrop = ColorRect.new()
+	ladder_dialog_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ladder_dialog_backdrop.color = Color(0.02, 0.04, 0.06, 0.45)
+	ladder_dialog_backdrop.visible = false
+	ladder_dialog_backdrop.gui_input.connect(
+		func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+				_set_ladder_dialog_visible(false),
+	)
+	ui_root.add_child(ladder_dialog_backdrop)
+
+	ladder_dialog = PanelContainer.new()
+	ladder_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	ladder_dialog.custom_minimum_size = Vector2(680, 500)
+	ladder_dialog.offset_left = -340
+	ladder_dialog.offset_right = 340
+	ladder_dialog.offset_top = -250
+	ladder_dialog.offset_bottom = 250
+	var style := _ui_stylebox(Color(0.063, 0.098, 0.137, 0.96), Color("294052"), 12, 1, 16, 16)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 16
+	ladder_dialog.add_theme_stylebox_override("panel", style)
+	ladder_dialog.visible = false
+	ui_root.add_child(ladder_dialog)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	ladder_dialog.add_child(vbox)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	vbox.add_child(header)
+
+	var heading := Label.new()
+	heading.text = "LADDER / IEC 61131-3 SOFT-PLC"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_theme_font_size_override("font_size", 15)
+	heading.add_theme_color_override("font_color", Color("eef7fa"))
+	header.add_child(heading)
+
+	ladder_enabled_check = CheckBox.new()
+	ladder_enabled_check.text = "Enable Internal PLC"
+	ladder_enabled_check.tooltip_text = "Enable Internal Ladder PLC (automatically disables external Modbus TCP)"
+	ladder_enabled_check.button_pressed = soft_plc.enabled
+	ladder_enabled_check.toggled.connect(
+		func(pressed: bool):
+			_set_controller_mode(2 if pressed else 0, true),
+	)
+	header.add_child(ladder_enabled_check)
+
+	var close_btn := Button.new()
+	close_btn.text = "✕"
+	close_btn.custom_minimum_size = Vector2(30, 28)
+	close_btn.pressed.connect(
+		func():
+			_set_ladder_dialog_visible(false),
+	)
+	header.add_child(close_btn)
+
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 8)
+	vbox.add_child(bar)
+
+	var preset_lbl := Label.new()
+	preset_lbl.text = "Preset:"
+	preset_lbl.add_theme_font_size_override("font_size", 12)
+	bar.add_child(preset_lbl)
+
+	var presets := _get_ladder_presets()
+	var preset_opt := OptionButton.new()
+	preset_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preset_opt.add_item("-- Select Example Preset --", 0)
+	var p_names := presets.keys()
+	for i in range(p_names.size()):
+		preset_opt.add_item(str(p_names[i]), i + 1)
+	preset_opt.item_selected.connect(
+		func(idx: int):
+			if idx > 0 and idx - 1 < p_names.size():
+				var cur_presets := _get_ladder_presets()
+				var key := str(p_names[idx - 1])
+				ladder_code_edit.text = str(cur_presets[key])
+				_apply_ladder_code(true),
+	)
+	bar.add_child(preset_opt)
+
+	var reset_plc_btn := Button.new()
+	reset_plc_btn.text = "Reset T/C/M"
+	reset_plc_btn.tooltip_text = "Reset Timers, Counters, and %MX memory"
+	reset_plc_btn.pressed.connect(
+		func():
+			soft_plc.reset_runtime()
+			_refresh_ladder_watch(),
+	)
+	bar.add_child(reset_plc_btn)
+
+	var help_lbl := Label.new()
+	help_lbl.text = "Ops: LD LDN LDP LDF AND ANDN OR ORN AND( OR( ) | ST STN S R | TON TOF (ms/s) | CTU CTD RST | LD_GT AND_EQ ..."
+	help_lbl.add_theme_font_size_override("font_size", 11)
+	help_lbl.add_theme_color_override("font_color", Color("7ea7c2"))
+	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(help_lbl)
+
+	ladder_code_edit = CodeEdit.new()
+	ladder_code_edit.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	ladder_code_edit.gutters_draw_line_numbers = true
+	ladder_code_edit.highlight_current_line = true
+	ladder_code_edit.text = str(presets["Auto Water Tank (Low/High)"]) if soft_plc.source_code.is_empty() else soft_plc.source_code
+	ladder_code_edit.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(ladder_code_edit)
+
+	ladder_status_label = Label.new()
+	ladder_status_label.text = "Ready"
+	ladder_status_label.add_theme_font_size_override("font_size", 12)
+	ladder_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(ladder_status_label)
+
+	ladder_watch_label = Label.new()
+	ladder_watch_label.text = "Scans: 0"
+	ladder_watch_label.add_theme_font_size_override("font_size", 11)
+	ladder_watch_label.add_theme_color_override("font_color", Color("9cb3c4"))
+	ladder_watch_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(ladder_watch_label)
+
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 8)
+	vbox.add_child(footer)
+
+	var compile_btn := Button.new()
+	compile_btn.text = "Compile & Apply"
+	_style_accent_button(compile_btn, "1e6b45", "278758", "3eb87a")
+	compile_btn.pressed.connect(func(): _apply_ladder_code(true))
+	footer.add_child(compile_btn)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(spacer)
+
+	var done_btn := Button.new()
+	done_btn.text = "Done"
+	done_btn.custom_minimum_size = Vector2(84, 30)
+	done_btn.pressed.connect(func(): _set_ladder_dialog_visible(false))
+	footer.add_child(done_btn)
+
+	_apply_ladder_code(false)
+
+
+func _apply_ladder_code(save_cfg: bool = true) -> void:
+	if not is_instance_valid(ladder_code_edit):
+		return
+	var res: Dictionary = soft_plc.compile(ladder_code_edit.text)
+	if is_instance_valid(ladder_status_label):
+		if bool(res["ok"]):
+			ladder_status_label.text = "Compiled OK (%d instructions)" % int(res["instruction_count"])
+			ladder_status_label.add_theme_color_override("font_color", Color("66e0a3"))
+		else:
+			var errs: Array = res["errors"]
+			ladder_status_label.text = "Error: " + str(errs[0])
+			ladder_status_label.add_theme_color_override("font_color", Color("f06d6d"))
+	if save_cfg:
+		_save_settings()
+
+
+func _refresh_ladder_watch() -> void:
+	if not is_instance_valid(ladder_watch_label):
+		return
+	var state_str := "RUN" if (soft_plc.enabled and running and plc_mode) else ("IDLE" if soft_plc.enabled else "OFF")
+	var parts: Array[String] = ["PLC: %s | Scans: %d" % [state_str, soft_plc.scan_count]]
+	var active_m: Array[String] = []
+	for i in range(64):
+		if soft_plc.memory_bits[i]:
+			active_m.append("%%MX%d.%d" % [i / 8, i % 8])
+	if not active_m.is_empty():
+		parts.append("M: " + ", ".join(active_m.slice(0, 6)))
+	var active_t: Array[String] = []
+	for i in range(8):
+		var t: Dictionary = soft_plc.timers[i]
+		if float(t["et_ms"]) > 0.0 or bool(t["q"]):
+			active_t.append("T%d(Q=%d, %.1fs)" % [i, 1 if bool(t["q"]) else 0, float(t["et_ms"]) / 1000.0])
+	if not active_t.is_empty():
+		parts.append(" ".join(active_t))
+	var active_c: Array[String] = []
+	for i in range(8):
+		var c: Dictionary = soft_plc.counters[i]
+		if int(c["cv"]) != 0 or bool(c["q"]):
+			active_c.append("C%d(Q=%d, CV=%d)" % [i, 1 if bool(c["q"]) else 0, int(c["cv"])])
+	if not active_c.is_empty():
+		parts.append(" ".join(active_c))
+	var next_watch := "  |  ".join(parts)
+	if ladder_watch_label.text != next_watch:
+		ladder_watch_label.text = next_watch
+
+
 func _apply_modbus_server_settings() -> void:
 	var is_client := is_instance_valid(modbus_mode_option) and modbus_mode_option.selected == 1
 	var ip_txt := modbus_ip_input.text.strip_edges()
@@ -2832,7 +4298,12 @@ func _apply_modbus_server_settings() -> void:
 	else:
 		ModbusTCP.bind_address = ip_txt if not ip_txt.is_empty() else "0.0.0.0"
 		ModbusTCP.port = int(modbus_port_input.value)
-	ModbusTCP.start_service()
+	var want_mb := modbus_enabled_check.button_pressed if is_instance_valid(modbus_enabled_check) else ModbusTCP.enabled
+	_set_controller_mode(1 if want_mb else 0, false)
+	if ModbusTCP.enabled:
+		ModbusTCP.start_service()
+	else:
+		ModbusTCP.stop_service()
 	_refresh_modbus_dialog()
 	_save_settings()
 
@@ -2852,7 +4323,7 @@ func _auto_map_modbus_iec() -> void:
 			next_input += 1
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in PRODUCT_KINDS:
+		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
 		if kind in [
 			"conveyor",
@@ -2874,7 +4345,7 @@ func _auto_map_modbus_iec() -> void:
 			next_coil += 3 if kind == "stack_light" else 1
 		if kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "cabinet", "water_tank", "light_curtain"]:
 			obj.set_meta("modbus_input", next_input)
-			next_input += 1
+			next_input += 3 if kind == "water_tank" else 1
 		if kind in ["vision_sensor", "rgb_sensor", "water_tank"]:
 			obj.set_meta("modbus_input_reg", next_ir)
 			next_ir += 1
@@ -2905,19 +4376,31 @@ func _clear_all_modbus_tags() -> void:
 func _refresh_modbus_dialog() -> void:
 	if not is_instance_valid(modbus_io_grid):
 		return
+	var mb_enabled := ModbusTCP.enabled
+	if is_instance_valid(modbus_enabled_check):
+		modbus_enabled_check.set_pressed_no_signal(mb_enabled)
 	var is_client := ModbusTCP.mode == ModbusTCP.Mode.CLIENT
 	if is_instance_valid(modbus_mode_option):
 		modbus_mode_option.select(1 if is_client else 0)
+		modbus_mode_option.disabled = not mb_enabled
 	if is_instance_valid(modbus_ip_label):
 		modbus_ip_label.text = "PLC IP:" if is_client else "Bind IP:"
 	if is_instance_valid(modbus_ip_input):
 		modbus_ip_input.text = ModbusTCP.remote_host if is_client else ModbusTCP.bind_address
+		modbus_ip_input.editable = mb_enabled
 	if is_instance_valid(modbus_port_input):
 		modbus_port_input.value = ModbusTCP.remote_port if is_client else ModbusTCP.port
+		modbus_port_input.editable = mb_enabled
 	if is_instance_valid(modbus_poll_input):
 		modbus_poll_input.value = int(round(ModbusTCP.poll_interval * 1000.0))
+		modbus_poll_input.editable = mb_enabled
+	if is_instance_valid(modbus_restart_btn):
+		modbus_restart_btn.disabled = not mb_enabled
 	if is_instance_valid(modbus_srv_status):
-		if is_client:
+		if not mb_enabled:
+			modbus_srv_status.text = "Modbus TCP: DISABLED"
+			modbus_srv_status.add_theme_color_override("font_color", Color("8aa0b0"))
+		elif is_client:
 			if ModbusTCP.is_client_connected():
 				modbus_srv_status.text = "Client: CONNECTED to %s:%d (FC01 Coils, FC16 DI->Reg 0..3)" % [
 					ModbusTCP.remote_host,
@@ -3017,7 +4500,7 @@ func _refresh_modbus_dialog() -> void:
 
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in PRODUCT_KINDS:
+		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
 		var name_lbl := Label.new()
 		name_lbl.text = obj.name
@@ -3066,14 +4549,17 @@ func _refresh_modbus_dialog() -> void:
 					coil_edit.text = _format_iec_address(
 						int(target_obj.get_meta("modbus_coil", -1)),
 						"QX",
-					),
+					)
+					_refresh_modbus_conflict_warning()
+					if kind in ["stack_light", "cabinet"]:
+						_refresh_modbus_dialog.call_deferred(),
 			)
 		modbus_io_grid.add_child(coil_edit)
 
 		var input_edit := LineEdit.new()
 		input_edit.custom_minimum_size.x = 130
 		input_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var has_input := kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "cabinet"]
+		var has_input := kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "cabinet", "water_tank", "light_curtain"]
 		input_edit.editable = has_input
 		input_edit.placeholder_text = "%IX0.0" if has_input else "-"
 		input_edit.text = _format_iec_address(int(obj.get_meta("modbus_input", -1)), "IX") if has_input else ""
@@ -3091,9 +4577,121 @@ func _refresh_modbus_dialog() -> void:
 					input_edit.text = _format_iec_address(
 						int(target_obj.get_meta("modbus_input", -1)),
 						"IX",
-					),
+					)
+					_refresh_modbus_conflict_warning()
+					if kind in ["water_tank", "cabinet"]:
+						_refresh_modbus_dialog.call_deferred(),
 			)
 		modbus_io_grid.add_child(input_edit)
+
+		if kind == "water_tank":
+			var base_in := int(obj.get_meta("modbus_input", -1))
+			for idx in range(3):
+				var lvl_names := ["Low Level (>=20%)", "Mid Level (>=50%)", "High Level (>=85%)"]
+				var ix_txt := _format_iec_address(base_in + idx, "IX") if base_in >= 0 else "-"
+				_add_modbus_subrow_label("  └ " + lvl_names[idx], "DI +%d" % idx, "-", ix_txt)
+			_add_modbus_word_subrow(obj, "  └ Level % (IR)", "modbus_input_reg", "IW", false)
+		elif kind == "stack_light":
+			var base_coil := int(obj.get_meta("modbus_coil", -1))
+			for idx in range(3):
+				var lamp_names := ["Green Lamp", "Yellow Lamp", "Red Lamp"]
+				var qx_txt := _format_iec_address(base_coil + idx, "QX") if base_coil >= 0 else "-"
+				_add_modbus_subrow_label("  └ " + lamp_names[idx], "DO +%d" % idx, qx_txt, "-")
+		elif kind in ["vision_sensor", "rgb_sensor"]:
+			_add_modbus_word_subrow(obj, "  └ Out Word (IR)", "modbus_input_reg", "IW", false)
+			_add_modbus_word_subrow(obj, "  └ Cmd Word (HR)", "modbus_holding_reg", "QW", true)
+		elif kind == "cabinet":
+			var cab_items := _collect_cabinet_status_items(obj)
+			var has_pot := false
+			for cab_it in cab_items:
+				var cdir := str(cab_it.get("dir", ""))
+				var ckind := str(cab_it.get("kind", cdir))
+				var caddr := int(cab_it.get("addr", -1))
+				if cdir == "coil":
+					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), ckind, _format_iec_address(caddr, "QX") if caddr >= 0 else "-", "-")
+				elif cdir == "input":
+					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), ckind, "-", _format_iec_address(caddr, "IX") if caddr >= 0 else "-")
+				elif cdir == "input_reg":
+					has_pot = true
+					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), "pot (IR)", "-", _format_word_address(caddr, "IW") if caddr >= 0 else "-")
+			if has_pot:
+				_add_modbus_word_subrow(obj, "  └ Pot Base (IR)", "modbus_input_reg", "IW", false)
+
+
+func _add_modbus_subrow_label(label_text: String, type_text: String, coil_text: String, input_text: String) -> void:
+	var n_lbl := Label.new()
+	n_lbl.text = label_text
+	n_lbl.custom_minimum_size.x = 135
+	n_lbl.add_theme_font_size_override("font_size", 11)
+	n_lbl.add_theme_color_override("font_color", Color("b8ccd8"))
+	modbus_io_grid.add_child(n_lbl)
+
+	var t_lbl := Label.new()
+	t_lbl.text = type_text
+	t_lbl.custom_minimum_size.x = 75
+	t_lbl.add_theme_font_size_override("font_size", 11)
+	t_lbl.add_theme_color_override("font_color", Color("6f8696"))
+	modbus_io_grid.add_child(t_lbl)
+
+	var c_lbl := Label.new()
+	c_lbl.text = coil_text
+	c_lbl.add_theme_font_size_override("font_size", 11)
+	c_lbl.add_theme_color_override("font_color", Color("4fd18b") if coil_text != "-" else Color("5c6e7c"))
+	modbus_io_grid.add_child(c_lbl)
+
+	var i_lbl := Label.new()
+	i_lbl.text = input_text
+	i_lbl.add_theme_font_size_override("font_size", 11)
+	i_lbl.add_theme_color_override("font_color", Color("f0c44d") if input_text != "-" else Color("5c6e7c"))
+	modbus_io_grid.add_child(i_lbl)
+
+
+func _add_modbus_word_subrow(obj: Node3D, label_text: String, meta_key: String, prefix: String, in_coil_col: bool) -> void:
+	var n_lbl := Label.new()
+	n_lbl.text = label_text
+	n_lbl.custom_minimum_size.x = 135
+	n_lbl.add_theme_font_size_override("font_size", 11)
+	n_lbl.add_theme_color_override("font_color", Color("67c8ff"))
+	modbus_io_grid.add_child(n_lbl)
+
+	var t_lbl := Label.new()
+	t_lbl.text = "word"
+	t_lbl.custom_minimum_size.x = 75
+	t_lbl.add_theme_font_size_override("font_size", 11)
+	t_lbl.add_theme_color_override("font_color", Color("6f8696"))
+	modbus_io_grid.add_child(t_lbl)
+
+	var word_edit := LineEdit.new()
+	word_edit.custom_minimum_size.x = 130
+	word_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	word_edit.placeholder_text = "%" + prefix + "0"
+	word_edit.text = _format_word_address(int(obj.get_meta(meta_key, -1)), prefix)
+	var target_obj := obj
+	word_edit.text_changed.connect(
+		func(txt: String):
+			var p := _parse_word_register_address(txt)
+			if p >= -1:
+				target_obj.set_meta(meta_key, p)
+				_save_settings(),
+	)
+	word_edit.focus_exited.connect(
+		func():
+			word_edit.text = _format_word_address(int(target_obj.get_meta(meta_key, -1)), prefix)
+			_refresh_io_status_list()
+			_refresh_modbus_conflict_warning(),
+	)
+
+	var dash_lbl := Label.new()
+	dash_lbl.text = "-"
+	dash_lbl.add_theme_font_size_override("font_size", 11)
+	dash_lbl.add_theme_color_override("font_color", Color("5c6e7c"))
+
+	if in_coil_col:
+		modbus_io_grid.add_child(word_edit)
+		modbus_io_grid.add_child(dash_lbl)
+	else:
+		modbus_io_grid.add_child(dash_lbl)
+		modbus_io_grid.add_child(word_edit)
 
 
 func _draw_axis_gizmo() -> void:
@@ -3177,19 +4775,19 @@ func _build_transform_controls(ui_root: Control) -> void:
 	var move_row := HBoxContainer.new()
 	column.add_child(move_row)
 	for item in [
-		["X -", Vector3(-GRID_STEP, 0, 0)],
-		["X +", Vector3(GRID_STEP, 0, 0)],
-		["Y -", Vector3(0, 0, GRID_STEP)],
-		["Y +", Vector3(0, 0, -GRID_STEP)],
+		["X -", Vector3(-1, 0, 0)],
+		["X +", Vector3(1, 0, 0)],
+		["Y -", Vector3(0, 0, 1)],
+		["Y +", Vector3(0, 0, -1)],
 	]:
 		var button := Button.new()
 		button.text = item[0]
-		button.tooltip_text = "Move %.1f grid unit" % GRID_STEP
+		button.tooltip_text = "Move 1 grid unit"
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var delta: Vector3 = item[1]
+		var dir: Vector3 = item[1]
 		button.pressed.connect(
 			func():
-				_move_selected(delta),
+				_move_selected(dir * grid_step),
 		)
 		move_row.add_child(button)
 	var height_row := HBoxContainer.new()
@@ -3345,30 +4943,7 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_parts_row = HBoxContainer.new()
 	cabinet_parts_row.visible = false
 	column.add_child(cabinet_parts_row)
-	cabinet_yellow_check = CheckBox.new()
-	cabinet_yellow_check.text = "Yellow"
-	cabinet_yellow_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cabinet_yellow_check.toggled.connect(
-		func(on: bool):
-			if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "cabinet":
-				selected_object.set("show_yellow_lamp", on)
-				_sync_2d_cabinet_customization(selected_object)
-				_refresh_cabinet_slot_grid()
-				_save_settings(),
-	)
-	cabinet_parts_row.add_child(cabinet_yellow_check)
-	cabinet_rev_check = CheckBox.new()
-	cabinet_rev_check.text = "BTN01"
-	cabinet_rev_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cabinet_rev_check.toggled.connect(
-		func(on: bool):
-			if is_instance_valid(selected_object) and str(selected_object.get_meta("kind", "")) == "cabinet":
-				selected_object.set("show_rev_btn", on)
-				_sync_2d_cabinet_customization(selected_object)
-				_refresh_cabinet_slot_grid()
-				_save_settings(),
-	)
-	cabinet_parts_row.add_child(cabinet_rev_check)
+
 	cabinet_slot_box = VBoxContainer.new()
 	cabinet_slot_box.visible = false
 	cabinet_slot_box.add_theme_constant_override("separation", 4)
@@ -3404,6 +4979,8 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_slot_kind.add_item("Lamp", 0)
 	cabinet_slot_kind.add_item("Push Button", 1)
 	cabinet_slot_kind.add_item("Switch Select", 2)
+	cabinet_slot_kind.add_item("Switch 3-Pos", 3)
+	cabinet_slot_kind.add_item("Potentiometer", 4)
 	cabinet_slot_kind.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cabinet_slot_kind.item_selected.connect(func(_idx: int): _on_live_edit_cabinet_slot())
 	slot_cfg_row.add_child(cabinet_slot_kind)
@@ -3425,6 +5002,11 @@ func _build_transform_controls(ui_root: Control) -> void:
 	slot_apply_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slot_apply_btn.pressed.connect(_on_apply_cabinet_slot)
 	slot_btn_row.add_child(slot_apply_btn)
+	cabinet_slot_move_btn = Button.new()
+	cabinet_slot_move_btn.text = "Move"
+	cabinet_slot_move_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cabinet_slot_move_btn.pressed.connect(_on_toggle_cabinet_slot_move)
+	slot_btn_row.add_child(cabinet_slot_move_btn)
 	var slot_clear_btn := Button.new()
 	slot_clear_btn.text = "Clear"
 	slot_clear_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3551,6 +5133,13 @@ func _build_transform_controls(ui_root: Control) -> void:
 	)
 	vision_hr_row.add_child(vision_hr_field)
 	_add_modbus_row_buttons(vision_hr_row, "modbus_holding_reg", vision_hr_field, "QW", true)
+	var tank_edit_ui := _create_tank_sim_box()
+	tank_edit_box = tank_edit_ui["box"]
+	tank_edit_sensors_label = tank_edit_ui["sensors_label"]
+	tank_edit_valve_btn = tank_edit_ui["valve_btn"]
+	tank_edit_valve_slider = tank_edit_ui["valve_slider"]
+	tank_edit_valve_pct_label = tank_edit_ui["pct_label"]
+	column.add_child(tank_edit_box)
 	modbus_conflict_label = Label.new()
 	modbus_conflict_label.visible = false
 	modbus_conflict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -3569,6 +5158,8 @@ func _refresh_transform_controls() -> void:
 	)
 	transform_panel.visible = active
 	_refresh_force_panel()
+	if is_instance_valid(delete_tool_button):
+		delete_tool_button.disabled = not (active and not selected_object.has_meta("base_id"))
 	if active:
 		var pos: Vector3 = selected_object.get_meta("grid_position")
 		var display_y := 0.0 if is_zero_approx(pos.z) else -pos.z
@@ -3612,9 +5203,20 @@ func _refresh_transform_controls() -> void:
 		emitter_mode_row.visible = is_emitter
 		if is_emitter and is_instance_valid(emitter_mode_option):
 			emitter_mode_option.select(int(selected_object.get("box_mode")))
+		var is_tank: bool = kind_str == "water_tank"
+		if is_instance_valid(tank_edit_box):
+			tank_edit_box.visible = is_tank
+			if is_tank:
+				_refresh_tank_sim_box(
+					selected_object,
+					tank_edit_sensors_label,
+					tank_edit_valve_btn,
+					tank_edit_valve_slider,
+					tank_edit_valve_pct_label,
+				)
 		var is_cabinet: bool = kind_str == "cabinet"
 		cabinet_title_row.visible = is_cabinet
-		cabinet_parts_row.visible = is_cabinet
+		cabinet_parts_row.visible = is_cabinet and bool(selected_object.get("show_builtin_items"))
 		cabinet_slot_box.visible = is_cabinet
 		if is_cabinet:
 			if is_instance_valid(cabinet_title_input) and not cabinet_title_input.has_focus():
@@ -3638,32 +5240,41 @@ func _refresh_transform_controls() -> void:
 			"water_tank",
 			"solenoid_valve",
 			"reject_bin",
-			"cabinet",
 		]
-		modbus_coil_row.visible = has_coil
-		if has_coil and is_instance_valid(modbus_coil_input):
-			var c_addr := int(selected_object.get_meta("modbus_coil", -1))
-			modbus_coil_input.text = _format_iec_address(c_addr, "QX")
 		var has_input: bool = kind_str in [
 			"sensor",
 			"vision_sensor",
 			"rgb_sensor",
 			"stopper",
-			"cabinet",
+			"water_tank",
 		]
+		var has_input_reg := is_word_sensor or kind_str == "water_tank"
+		if is_cabinet:
+			for cab_it in _collect_cabinet_status_items(selected_object):
+				var d := str(cab_it.get("dir", ""))
+				if d == "coil":
+					has_coil = true
+				elif d == "input":
+					has_input = true
+				elif d == "input_reg":
+					has_input_reg = true
+		modbus_coil_row.visible = has_coil
+		if has_coil and is_instance_valid(modbus_coil_input):
+			var c_addr := int(selected_object.get_meta("modbus_coil", -1))
+			modbus_coil_input.text = _format_iec_address(c_addr, "QX")
 		modbus_input_row.visible = has_input
 		if has_input and is_instance_valid(modbus_input_field):
 			var i_addr := int(selected_object.get_meta("modbus_input", -1))
 			modbus_input_field.text = _format_iec_address(i_addr, "IX")
-		vision_ir_row.visible = is_word_sensor
-		if is_word_sensor and is_instance_valid(vision_ir_field):
+		vision_ir_row.visible = has_input_reg
+		if has_input_reg and is_instance_valid(vision_ir_field):
 			var ir_addr := int(selected_object.get_meta("modbus_input_reg", -1))
 			vision_ir_field.text = _format_word_address(ir_addr, "IW")
 		vision_hr_row.visible = is_word_sensor
 		if is_word_sensor and is_instance_valid(vision_hr_field):
 			var hr_addr := int(selected_object.get_meta("modbus_holding_reg", -1))
 			vision_hr_field.text = _format_word_address(hr_addr, "QW")
-		var show_modbus: bool = has_coil or has_input or is_word_sensor
+		var show_modbus: bool = has_coil or has_input or has_input_reg or is_word_sensor
 		if is_instance_valid(modbus_section_sep):
 			modbus_section_sep.visible = show_modbus
 		if is_instance_valid(modbus_section_header):
@@ -3674,14 +5285,7 @@ func _refresh_transform_controls() -> void:
 
 
 func _fit_transform_panel() -> void:
-	if not is_instance_valid(transform_panel):
-		return
-	var min_sz := transform_panel.get_combined_minimum_size()
-	var w := maxf(min_sz.x, 284.0)
-	transform_panel.offset_right = -16.0
-	transform_panel.offset_left = -16.0 - w
-	transform_panel.offset_bottom = -46.0
-	transform_panel.offset_top = -46.0 - min_sz.y
+	_fit_bottom_right_panel(transform_panel, 284.0)
 
 
 func _parse_iec_or_int_address(raw_text: String) -> int:
@@ -3805,6 +5409,22 @@ func _clear_modbus_field(meta_key: String, field: LineEdit) -> void:
 	_save_settings()
 
 
+func _modbus_addr_span(obj: Node3D, meta_key: String) -> int:
+	var kind := str(obj.get_meta("kind", ""))
+	if meta_key == "modbus_input" and kind == "water_tank":
+		return 3
+	if meta_key == "modbus_coil" and kind == "stack_light":
+		return 3
+	if kind == "cabinet" and meta_key in ["modbus_coil", "modbus_input"]:
+		var dir_match := "coil" if meta_key == "modbus_coil" else "input"
+		var cnt := 0
+		for it in _collect_cabinet_status_items(obj):
+			if str(it.get("dir", "")) == dir_match:
+				cnt += 1
+		return maxi(1, cnt)
+	return 1
+
+
 func _refresh_modbus_conflict_warning() -> void:
 	if not is_instance_valid(modbus_conflict_label):
 		return
@@ -3825,12 +5445,18 @@ func _refresh_modbus_conflict_warning() -> void:
 		var addr := int(selected_object.get_meta(key, -1))
 		if addr < 0:
 			continue
+		var span_a := _modbus_addr_span(selected_object, key)
 		for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 			if obj == selected_object:
 				continue
-			if int(obj.get_meta(key, -1)) == addr:
-				var fmt := _format_word_address(addr, pfx) if is_w else _format_iec_address(addr, pfx)
-				warnings.append("⚠ %s already used by %s" % [fmt, obj.name])
+			var other_addr := int(obj.get_meta(key, -1))
+			if other_addr < 0:
+				continue
+			var span_b := _modbus_addr_span(obj as Node3D, key)
+			if addr < other_addr + span_b and other_addr < addr + span_a:
+				var overlap_addr := maxi(addr, other_addr)
+				var fmt := _format_word_address(overlap_addr, pfx) if is_w else _format_iec_address(overlap_addr, pfx)
+				warnings.append("⚠ %s overlaps with %s" % [fmt, obj.name])
 				break
 	modbus_conflict_label.visible = not warnings.is_empty()
 	modbus_conflict_label.text = "\n".join(warnings)
@@ -3961,10 +5587,8 @@ func _spawn_cardboard_box() -> RigidBody3D:
 	add_child(box, true)
 	box.add_to_group("product_boxes")
 	var cardboard := box.find_child("CardboardBody", true, false) as MeshInstance3D
-	var box_material := _cardboard_material().duplicate() as StandardMaterial3D
 	var color_idx := random.randi_range(0, BOX_COLORS.size() - 1)
-	box_material.albedo_color = BOX_COLORS[color_idx]
-	cardboard.material_override = box_material
+	cardboard.material_override = _get_product_material("box", color_idx)
 	box.set_meta("color_index", color_idx)
 	return box
 
@@ -3978,10 +5602,8 @@ func _spawn_plastic_box() -> RigidBody3D:
 	add_child(box, true)
 	box.add_to_group("product_boxes")
 	var plastic := box.find_child("Box", true, false) as MeshInstance3D
-	var box_material := _plastic_material().duplicate() as StandardMaterial3D
 	var color_idx := random.randi_range(0, BOX_COLORS.size() - 1)
-	box_material.albedo_color = BOX_COLORS[color_idx]
-	plastic.material_override = box_material
+	plastic.material_override = _get_product_material("box_plastic", color_idx)
 	box.set_meta("color_index", color_idx)
 	return box
 
@@ -4021,6 +5643,19 @@ func _product_world_position(kind: String, pos: Vector3) -> Vector3:
 	return Vector3(pos.x, bottom, pos.z)
 
 
+func _get_product_material(kind: String, color_index: int) -> StandardMaterial3D:
+	var is_plastic := kind == "box_plastic"
+	var cache := _plastic_color_materials if is_plastic else _cardboard_color_materials
+	var cached := cache.get(color_index) as StandardMaterial3D
+	if cached != null:
+		return cached
+	var base := _plastic_material() if is_plastic else _cardboard_material()
+	var mat := base.duplicate() as StandardMaterial3D
+	mat.albedo_color = BOX_COLORS[color_index]
+	cache[color_index] = mat
+	return mat
+
+
 func _set_product_color(object: RigidBody3D, kind: String, color_index: int) -> void:
 	object.set_meta("color_index", color_index)
 	if kind not in ["box", "box_plastic", "box_small"]:
@@ -4029,9 +5664,7 @@ func _set_product_color(object: RigidBody3D, kind: String, color_index: int) -> 
 	var visual := object.find_child(visual_name, true, false) as MeshInstance3D
 	if visual == null:
 		return
-	var material := (_plastic_material() if kind == "box_plastic" else _cardboard_material()).duplicate() as StandardMaterial3D
-	material.albedo_color = BOX_COLORS[color_index]
-	visual.material_override = material
+	visual.material_override = _get_product_material(kind, color_index)
 
 
 func _restore_placed_products() -> void:
@@ -4092,14 +5725,18 @@ func _set_running(value: bool) -> void:
 		if str(obj.get_meta("kind", "")) == "turn":
 			var area := obj.get_node_or_null("TransferArea")
 			if area != null and not obj.has_meta("forced_active") and not plc_mode:
-				area.set("active", running)
+				area.set("active", false)
 	if is_instance_valid(start_button):
-		start_button.text = "Stop" if running else "Run"
+		start_button.text = ""
+		start_button.icon = _make_svg_icon(
+			'<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' if running else '<polygon points="6 3 20 12 6 21 6 3"/>'
+		)
 		if running:
 			_style_accent_button(start_button, "7a2e33", "993b41", "cc5a61")
 		else:
 			_style_accent_button(start_button, "1e6b45", "278758", "3eb87a")
 	_refresh_boxes_freeze()
+	_refresh_cabinet_hud()
 	if not test_mode and is_inside_tree():
 		_save_settings()
 
@@ -4118,7 +5755,7 @@ func _apply_conveyor_speed(belt: StaticBody3D) -> void:
 		if belt.has_meta("forced_active"):
 			belt.set("active", bool(belt.get_meta("forced_active")))
 		elif not plc_mode:
-			belt.set("active", running)
+			belt.set("active", running if test_mode else false)
 		elif belt.has_method("_update_velocity"):
 			belt.call("_update_velocity")
 	else:
@@ -4131,7 +5768,7 @@ func _toggle_plc_mode() -> void:
 	_apply_plc_mode(not plc_mode)
 
 
-func _apply_plc_mode(enabled: bool) -> void:
+func _apply_plc_mode(enabled: bool, save_cfg: bool = true) -> void:
 	plc_mode = enabled
 	_refresh_cabinet_hud()
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
@@ -4146,7 +5783,7 @@ func _apply_plc_mode(enabled: bool) -> void:
 		_sync_modbus_io()
 	else:
 		_set_running(running)
-	if not test_mode and is_inside_tree():
+	if save_cfg and not test_mode and is_inside_tree():
 		_save_settings()
 
 
@@ -4159,16 +5796,20 @@ func _save_settings() -> void:
 		"io_status_visible",
 		io_status_panel.visible if is_instance_valid(io_status_panel) else true,
 	)
-	cfg.set_value(
-		"ui",
-		"cabinet_visible",
-		cabinet_panel.visible if is_instance_valid(cabinet_panel) else true,
-	)
 	cfg.set_value("ui", "npcs_enabled", npcs_enabled)
+	cfg.set_value("ui", "npc_operator_enabled", npc_operator_enabled)
+	cfg.set_value("ui", "npc_tester_enabled", npc_tester_enabled)
+	cfg.set_value("ui", "npc_safety_enabled", npc_safety_enabled)
+	cfg.set_value("ui", "npc_walk_speed", npc_walk_speed)
+	cfg.set_value("ui", "npc_inspect_duration", npc_inspect_duration)
+	cfg.set_value("ui", "npc_chat_enabled", npc_chat_enabled)
 	cfg.set_value("ui", "sound_enabled", sound_enabled)
 	cfg.set_value("ui", "plc_mode", plc_mode)
 	cfg.set_value("ui", "running", running)
 	cfg.set_value("ui", "decor_style", decor_style)
+	cfg.set_value("ui", "grid_step", grid_step)
+	cfg.set_value("ui", "show_edit_grid", show_edit_grid)
+	cfg.set_value("modbus", "enabled", ModbusTCP.enabled)
 	cfg.set_value("modbus", "mode", int(ModbusTCP.mode))
 	cfg.set_value("modbus", "bind_address", ModbusTCP.bind_address)
 	cfg.set_value("modbus", "port", ModbusTCP.port)
@@ -4177,12 +5818,14 @@ func _save_settings() -> void:
 	cfg.set_value("modbus", "poll_interval", ModbusTCP.poll_interval)
 	cfg.set_value("modbus", "cabinet_coil", cabinet_coil_addr)
 	cfg.set_value("modbus", "cabinet_input", cabinet_input_addr)
+	cfg.set_value("ladder", "enabled", soft_plc.enabled)
+	cfg.set_value("ladder", "code", soft_plc.source_code)
 	for item in CABINET_IO_DEFS:
 		var io_id: String = item["id"]
 		cfg.set_value("cabinet_io", io_id, int(cabinet_io_addrs.get(io_id, -1)))
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in PRODUCT_KINDS:
+		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
 		var key := obj.name
 		cfg.set_value("objects", key + "_coil", int(obj.get_meta("modbus_coil", -1)))
@@ -4201,7 +5844,11 @@ func _save_settings() -> void:
 				float(obj.get_meta("configured_speed", BELT_SPEED)),
 			)
 		elif kind == "cabinet" and obj.has_method("get_customization"):
+			cfg.set_value("objects", key + "_input_reg", int(obj.get_meta("modbus_input_reg", -1)))
 			cfg.set_value("objects", key + "_cabinet_cfg", obj.call("get_customization"))
+		elif kind == "water_tank" and obj.has_method("get_tank_config"):
+			cfg.set_value("objects", key + "_input_reg", int(obj.get_meta("modbus_input_reg", -1)))
+			cfg.set_value("objects", key + "_tank_cfg", obj.call("get_tank_config"))
 	cfg.save(SETTINGS_PATH)
 
 
@@ -4210,6 +5857,7 @@ func _load_settings() -> void:
 	if cfg.load(SETTINGS_PATH) != OK:
 		return
 	_is_loading_settings = true
+	var saved_enabled := bool(cfg.get_value("modbus", "enabled", true))
 	var saved_mode := int(cfg.get_value("modbus", "mode", int(ModbusTCP.mode)))
 	var saved_ip := str(cfg.get_value("modbus", "bind_address", ModbusTCP.bind_address))
 	var saved_port := int(cfg.get_value("modbus", "port", ModbusTCP.port))
@@ -4226,7 +5874,8 @@ func _load_settings() -> void:
 		var io_id: String = item["id"]
 		cabinet_io_addrs[io_id] = int(cfg.get_value("cabinet_io", io_id, -1))
 	if (
-		saved_mode != int(ModbusTCP.mode) or saved_ip != ModbusTCP.bind_address
+		saved_enabled != ModbusTCP.enabled
+		or saved_mode != int(ModbusTCP.mode) or saved_ip != ModbusTCP.bind_address
 		or saved_port != ModbusTCP.port or saved_remote_ip != ModbusTCP.remote_host
 		or saved_remote_port != ModbusTCP.remote_port
 	):
@@ -4235,23 +5884,44 @@ func _load_settings() -> void:
 		ModbusTCP.port = saved_port
 		ModbusTCP.remote_host = saved_remote_ip
 		ModbusTCP.remote_port = saved_remote_port
-		ModbusTCP.start_service()
+		ModbusTCP.enabled = saved_enabled
+		if ModbusTCP.enabled:
+			ModbusTCP.start_service()
+		else:
+			ModbusTCP.stop_service()
+
+	soft_plc.enabled = bool(cfg.get_value("ladder", "enabled", false))
+	if soft_plc.enabled and ModbusTCP.enabled:
+		ModbusTCP.enabled = false
+		ModbusTCP.stop_service()
+	var saved_ladder_code := str(cfg.get_value("ladder", "code", ""))
+	if not saved_ladder_code.is_empty():
+		soft_plc.compile(saved_ladder_code)
+		if is_instance_valid(ladder_code_edit):
+			ladder_code_edit.text = saved_ladder_code
+	if is_instance_valid(ladder_enabled_check):
+		ladder_enabled_check.set_pressed_no_signal(soft_plc.enabled)
+	if is_instance_valid(plc_controller_option):
+		plc_controller_option.select(2 if soft_plc.enabled else (1 if ModbusTCP.enabled else 0))
 
 	var status_vis := bool(cfg.get_value("ui", "io_status_visible", true))
 	if is_instance_valid(io_status_panel) and io_status_panel.visible != status_vis:
 		_toggle_io_status_panel()
 
-	var cabinet_vis := bool(cfg.get_value("ui", "cabinet_visible", true))
 	var saved_npcs := bool(cfg.get_value("ui", "npcs_enabled", true))
+	npc_operator_enabled = bool(cfg.get_value("ui", "npc_operator_enabled", true))
+	npc_tester_enabled = bool(cfg.get_value("ui", "npc_tester_enabled", true))
+	npc_safety_enabled = bool(cfg.get_value("ui", "npc_safety_enabled", true))
+	npc_walk_speed = clampf(float(cfg.get_value("ui", "npc_walk_speed", 1.85)), 0.5, 4.0)
+	npc_inspect_duration = clampf(float(cfg.get_value("ui", "npc_inspect_duration", 2.2)), 0.5, 6.0)
+	npc_chat_enabled = bool(cfg.get_value("ui", "npc_chat_enabled", true))
 	_apply_npcs_enabled(saved_npcs)
 	var saved_sound := bool(cfg.get_value("ui", "sound_enabled", true))
 	_apply_sound_enabled(saved_sound)
-	if is_instance_valid(cabinet_panel) and cabinet_panel.visible != cabinet_vis:
-		_toggle_cabinet_panel()
 
-	var saved_plc := bool(cfg.get_value("ui", "plc_mode", true))
-	if saved_plc != plc_mode:
-		_apply_plc_mode(saved_plc)
+	var want_plc: bool = bool(soft_plc.enabled) or ModbusTCP.enabled
+	if want_plc != plc_mode:
+		_apply_plc_mode(want_plc, false)
 
 	var saved_running := bool(cfg.get_value("ui", "running", false))
 	_set_running(saved_running)
@@ -4259,10 +5929,20 @@ func _load_settings() -> void:
 		sandbox_label.text = "Mode: RUN" if saved_running else "Mode: STOP"
 	var saved_decor := str(cfg.get_value("ui", "decor_style", "factory"))
 	_apply_decor_style(saved_decor)
+	grid_step = clampf(float(cfg.get_value("ui", "grid_step", GRID_STEP)), 0.25, 1.0)
+	show_edit_grid = bool(cfg.get_value("ui", "show_edit_grid", true))
+	if is_instance_valid(grid_step_option):
+		var step_idx := 0 if grid_step < 0.35 else (2 if grid_step > 0.75 else 1)
+		grid_step_option.select(step_idx)
+	if is_instance_valid(show_grid_check):
+		show_grid_check.set_pressed_no_signal(show_edit_grid)
+	if is_instance_valid(edit_grid):
+		_rebuild_grid()
+		edit_grid.visible = edit_mode and show_edit_grid
 
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in PRODUCT_KINDS:
+		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
 		var key := obj.name
 		if cfg.has_section_key("objects", key + "_coil"):
@@ -4287,10 +5967,20 @@ func _load_settings() -> void:
 			)
 			if obj is StaticBody3D:
 				_apply_conveyor_speed(obj as StaticBody3D)
-		elif kind == "cabinet" and cfg.has_section_key("objects", key + "_cabinet_cfg"):
-			var cab_cfg = cfg.get_value("objects", key + "_cabinet_cfg", {})
-			if cab_cfg is Dictionary and obj.has_method("apply_customization"):
-				obj.call("apply_customization", cab_cfg)
+		elif kind == "cabinet":
+			if cfg.has_section_key("objects", key + "_input_reg"):
+				obj.set_meta("modbus_input_reg", int(cfg.get_value("objects", key + "_input_reg", -1)))
+			if cfg.has_section_key("objects", key + "_cabinet_cfg"):
+				var cab_cfg = cfg.get_value("objects", key + "_cabinet_cfg", {})
+				if cab_cfg is Dictionary and obj.has_method("apply_customization"):
+					obj.call("apply_customization", cab_cfg)
+		elif kind == "water_tank":
+			if cfg.has_section_key("objects", key + "_input_reg"):
+				obj.set_meta("modbus_input_reg", int(cfg.get_value("objects", key + "_input_reg", -1)))
+			if cfg.has_section_key("objects", key + "_tank_cfg"):
+				var wt_cfg = cfg.get_value("objects", key + "_tank_cfg", {})
+				if wt_cfg is Dictionary and obj.has_method("apply_tank_config"):
+					obj.call("apply_tank_config", wt_cfg)
 	_is_loading_settings = false
 	_refresh_modbus_dialog()
 	_refresh_io_status_list()
@@ -4306,6 +5996,8 @@ func _clear_all_forces() -> void:
 		if kind in ["pusher", "stopper", "emitter", "remover", "cabinet", "stack_light", "motor_fan", "pump", "water_tank", "solenoid_valve", "reject_bin"]:
 			obj.set("plc_mode", plc_mode)
 			obj.set("active", false)
+			if kind == "cabinet" and obj.has_method("clear_all_item_forces"):
+				obj.call("clear_all_item_forces")
 		elif kind == "turn":
 			var area := obj.get_node_or_null("TransferArea")
 			if area != null:
@@ -4347,7 +6039,7 @@ func _sync_modbus_io() -> void:
 			cabinet_layer.set("lamp_red_on", ModbusTCP.get_coil(do_red))
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in PRODUCT_KINDS:
+		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
 		var coil_addr := int(obj.get_meta("modbus_coil", -1))
 		var input_addr := int(obj.get_meta("modbus_input", -1))
@@ -4356,7 +6048,9 @@ func _sync_modbus_io() -> void:
 			ModbusTCP.set_discrete_input(input_addr, bool(obj.get("active")))
 		elif kind == "water_tank":
 			if input_addr >= 0:
-				ModbusTCP.set_discrete_input(input_addr, bool(obj.get("high_level")))
+				ModbusTCP.set_discrete_input(input_addr, bool(obj.get("low_level")))
+				ModbusTCP.set_discrete_input(input_addr + 1, bool(obj.get("mid_level")))
+				ModbusTCP.set_discrete_input(input_addr + 2, bool(obj.get("high_level")))
 			var wt_ir := int(obj.get_meta("modbus_input_reg", -1))
 			if wt_ir >= 0:
 				ModbusTCP.set_input_register(wt_ir, int(obj.get("level_percent")))
@@ -4392,19 +6086,35 @@ func _sync_modbus_io() -> void:
 		elif kind == "cabinet":
 			var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
 			var dyn_btn_states: Dictionary = obj.get("dynamic_button_states") if "dynamic_button_states" in obj else {}
+			var dyn_pot_values: Dictionary = obj.get("dynamic_pot_values") if "dynamic_pot_values" in obj else {}
+			var cab_ir_addr := int(obj.get_meta("modbus_input_reg", -1))
+			if cab_ir_addr >= 0:
+				var dyn_ir_idx := 0
+				for slot_item in dyn_slots:
+					if slot_item is Dictionary and str(slot_item.get("kind", "")) == "potentiometer":
+						var pot_io := str(slot_item.get("io_id", ""))
+						var pot_val := clampf(float(dyn_pot_values.get(pot_io, slot_item.get("value", 0.0))), 0.0, 1.0)
+						ModbusTCP.set_input_register(cab_ir_addr + dyn_ir_idx, roundi(pot_val * 10000.0))
+						dyn_ir_idx += 1
 			if input_addr >= 0:
 				ModbusTCP.set_discrete_input(input_addr, bool(obj.get("start_pressed")))
 				ModbusTCP.set_discrete_input(input_addr + 1, bool(obj.get("stop_pressed")))
 				ModbusTCP.set_discrete_input(input_addr + 2, bool(obj.get("estop_active")))
 				var dyn_in_idx := 0
 				for slot_item in dyn_slots:
-					if slot_item is Dictionary and str(slot_item.get("kind", "")) in ["push_button", "button", "switch_select"]:
+					if slot_item is Dictionary:
+						var mkind := str(slot_item.get("kind", ""))
 						var slot_io := str(slot_item.get("io_id", ""))
-						ModbusTCP.set_discrete_input(
-							input_addr + 3 + dyn_in_idx,
-							bool(dyn_btn_states.get(slot_io, false)),
-						)
-						dyn_in_idx += 1
+						if mkind == "switch_3pos":
+							ModbusTCP.set_discrete_input(input_addr + 3 + dyn_in_idx, bool(dyn_btn_states.get(slot_io + "_L", false)))
+							ModbusTCP.set_discrete_input(input_addr + 4 + dyn_in_idx, bool(dyn_btn_states.get(slot_io + "_R", false)))
+							dyn_in_idx += 2
+						elif mkind in ["push_button", "button", "switch_select"]:
+							ModbusTCP.set_discrete_input(
+								input_addr + 3 + dyn_in_idx,
+								bool(dyn_btn_states.get(slot_io, false)),
+							)
+							dyn_in_idx += 1
 			if coil_addr >= 0:
 				var g := ModbusTCP.get_coil(coil_addr)
 				obj.set("lamp_green_on", g)
@@ -4430,22 +6140,19 @@ func _sync_modbus_io() -> void:
 				var area := obj.get_node_or_null("TransferArea")
 				if area != null:
 					area.set("active", running and coil_addr >= 0 and ModbusTCP.get_coil(coil_addr))
-			"pusher", "emitter", "motor_fan", "pump", "water_tank", "solenoid_valve":
-				obj.set("active", running and coil_addr >= 0 and ModbusTCP.get_coil(coil_addr))
-			"remover", "reject_bin":
-				obj.set("active", running and (coil_addr < 0 or ModbusTCP.get_coil(coil_addr)))
-			"stopper":
+			"pusher", "emitter", "motor_fan", "pump", "water_tank", "solenoid_valve", "remover", "reject_bin", "stopper":
 				obj.set("active", running and coil_addr >= 0 and ModbusTCP.get_coil(coil_addr))
 
 
 func _reset_simulation() -> void:
 	_set_running(false)
 	_set_selection(null)
+	soft_plc.reset_runtime()
+	_refresh_ladder_watch()
 	_restore_placed_products()
 	sensor_bodies.clear()
 	_update_sensor_indicator()
 	detected_count = 0
-	spawn_clock = 0.0
 	if not _has_placed_products():
 		var box := _spawn_box()
 		box.freeze = true
@@ -4454,7 +6161,11 @@ func _reset_simulation() -> void:
 func _enter_edit_mode() -> void:
 	_clear_preview()
 	edit_mode = true
-	edit_grid.visible = true
+	if is_instance_valid(edit_tools_row):
+		edit_tools_row.visible = true
+	if is_instance_valid(edit_mode_button):
+		_style_accent_button(edit_mode_button, "1b4f6e", "23668f", "3b8cb8")
+	edit_grid.visible = show_edit_grid
 	dragging_object = false
 	rotating_object = false
 	placement = "select"
@@ -4463,6 +6174,7 @@ func _enter_edit_mode() -> void:
 	_restore_placed_products()
 	sandbox_label.text = "Edit: select"
 	_refresh_transform_controls()
+	_update_cabinet_panel_visibility()
 
 
 func _build_edit_grid() -> void:
@@ -4477,22 +6189,50 @@ func _rebuild_grid() -> void:
 	for child in edit_grid.get_children():
 		edit_grid.remove_child(child)
 		child.queue_free()
-	var steps_x := roundi(float(workspace_width) / (2.0 * GRID_STEP))
+	if _edit_grid_material == null:
+		_edit_grid_material = StandardMaterial3D.new()
+		_edit_grid_material.vertex_color_use_as_albedo = true
+		_edit_grid_material.roughness = 0.8
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var add_strip := func(cx: float, cz: float, hw: float, hd: float, col: Color) -> void:
+		const GRID_Y := -0.052
+		var p0 := Vector3(cx - hw, GRID_Y, cz - hd)
+		var p1 := Vector3(cx + hw, GRID_Y, cz - hd)
+		var p2 := Vector3(cx + hw, GRID_Y, cz + hd)
+		var p3 := Vector3(cx - hw, GRID_Y, cz + hd)
+		st.set_normal(Vector3.UP)
+		st.set_color(col)
+		st.add_vertex(p0)
+		st.add_vertex(p1)
+		st.add_vertex(p2)
+		st.add_vertex(p0)
+		st.add_vertex(p2)
+		st.add_vertex(p3)
+	var half_d := float(workspace_depth) * 0.5
+	var half_w := float(workspace_width) * 0.5
+	var steps_x := roundi(float(workspace_width) / (2.0 * grid_step))
 	for ix in range(-steps_x, steps_x + 1):
-		var x := float(ix) * GRID_STEP
+		var x := float(ix) * grid_step
 		var z_axis := ix == 0
 		var is_major := ix % 2 == 0
 		var w := 0.025 if z_axis else (0.012 if is_major else 0.007)
 		var col := Color("78d989") if z_axis else (Color("54717b") if is_major else Color("384c54"))
-		_box_mesh(edit_grid, Vector3(w, 0.008, workspace_depth), Vector3(x, -0.056, 0), col)
-	var steps_z := roundi(float(workspace_depth) / (2.0 * GRID_STEP))
+		add_strip.call(x, 0.0, w * 0.5, half_d, col)
+	var steps_z := roundi(float(workspace_depth) / (2.0 * grid_step))
 	for iz in range(-steps_z, steps_z + 1):
-		var z := float(iz) * GRID_STEP
+		var z := float(iz) * grid_step
 		var x_axis := iz == 0
 		var is_major := iz % 2 == 0
 		var w := 0.025 if x_axis else (0.012 if is_major else 0.007)
 		var col := Color("f06d6d") if x_axis else (Color("54717b") if is_major else Color("384c54"))
-		_box_mesh(edit_grid, Vector3(workspace_width, 0.008, w), Vector3(0, -0.056, z), col)
+		add_strip.call(0.0, z, half_w, w * 0.5, col)
+	var grid_mi := MeshInstance3D.new()
+	grid_mi.name = "EditGridMesh"
+	grid_mi.mesh = st.commit()
+	grid_mi.material_override = _edit_grid_material
+	grid_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	edit_grid.add_child(grid_mi)
 
 
 func _fits_workspace(pos: Vector3, size: Vector2, width: int, depth: int) -> bool:
@@ -4514,6 +6254,7 @@ func _apply_workspace_input() -> void:
 		):
 			sandbox_label.text = "Resize blocked: equipment outside new area"
 			return
+	_record_undo_snapshot()
 	_set_workspace_size(width, depth)
 	sandbox_label.text = "Workspace: %d x %d" % [width, depth]
 	_save_layout(true)
@@ -4530,6 +6271,8 @@ func _set_workspace_size(width: int, depth: int) -> void:
 	if is_instance_valid(width_input):
 		width_input.value = width
 		depth_input.value = depth
+	if is_instance_valid(floor_dialog_button):
+		floor_dialog_button.text = "%d×%d" % [width, depth]
 	_update_preview_color()
 
 
@@ -4539,17 +6282,21 @@ func _place_at(screen_position: Vector2) -> void:
 		return
 	var snapped := _snap_placement(
 		placement,
-		Vector3(snappedf(point.x, GRID_STEP), 0, snappedf(point.z, GRID_STEP)),
+		Vector3(snappedf(point.x, grid_step), 0, snappedf(point.z, grid_step)),
 		placement_angle,
 	)
 	if not _placement_valid(placement, snapped, placement_angle):
 		sandbox_label.text = "Cannot place: overlaps same type or outside floor"
 		return
+	_record_undo_snapshot()
 	var object := _create_sandbox_object(placement, snapped)
 	if object != null:
 		object.rotation_degrees.y = placement_angle
 		if placement == "turn":
 			_set_turn_direction(object, placement_reversed)
+		elif placement == "cabinet":
+			object.set("show_builtin_items", false)
+			object.set("cabinet_title", "CABINET")
 		if placement in PRODUCT_KINDS:
 			object.set_meta("placed_rotation", placement_angle)
 			var placed_kind := placement
@@ -4677,7 +6424,7 @@ func _update_placement_preview(screen_position: Vector2) -> void:
 	if point != null:
 		placement_preview.position = _snap_placement(
 			placement,
-			Vector3(snappedf(point.x, GRID_STEP), 0, snappedf(point.z, GRID_STEP)),
+			Vector3(snappedf(point.x, grid_step), 0, snappedf(point.z, grid_step)),
 			placement_angle,
 		)
 		placement_preview.rotation_degrees.y = placement_angle
@@ -5048,6 +6795,7 @@ func _ground_point(screen_position: Vector2):
 func _start_object_drag(screen_position: Vector2) -> void:
 	if not is_instance_valid(selected_object) or not selected_object.is_in_group("sandbox_objects"):
 		return
+	_drag_undo_snapshot = _build_layout_data()
 	var point = _ground_point(screen_position)
 	if point == null:
 		return
@@ -5064,6 +6812,7 @@ func _start_rotation_drag() -> void:
 	dragging_object = false
 	rotating_object = true
 	rotation_drag_pixels = 0.0
+	_drag_undo_snapshot = _build_layout_data()
 
 
 func _update_rotation_drag(relative_x: float) -> void:
@@ -5088,9 +6837,9 @@ func _drag_selected_to(screen_position: Vector2) -> void:
 	if point == null:
 		return
 	var new_grid := Vector3(
-		snappedf(point.x + drag_grid_offset.x, GRID_STEP),
+		snappedf(point.x + drag_grid_offset.x, grid_step),
 		0,
-		snappedf(point.z + drag_grid_offset.z, GRID_STEP),
+		snappedf(point.z + drag_grid_offset.z, grid_step),
 	)
 	new_grid = _snap_placement(
 		selected_object.get_meta("kind"),
@@ -5107,6 +6856,7 @@ func _drag_selected_to(screen_position: Vector2) -> void:
 	):
 		sandbox_label.text = "Cannot move: overlaps same type or outside floor"
 		return
+	_record_undo_snapshot()
 	if selected_object.get_meta("kind") in PRODUCT_KINDS:
 		selected_object.position = _product_world_position(
 			selected_object.get_meta("kind"),
@@ -5202,6 +6952,15 @@ func _create_sandbox_object(kind: String, position: Vector3, is_base: bool = fal
 			turn_area.set("plc_mode", plc_mode)
 	elif kind in ["pusher", "stopper", "emitter", "remover", "stack_light", "motor_fan", "pump", "water_tank", "solenoid_valve", "reject_bin"]:
 		object.set("plc_mode", plc_mode)
+		if kind == "water_tank" and object.has_signal("valve_toggled_3d"):
+			object.connect(
+				"valve_toggled_3d",
+				func(_open: bool):
+					if selected_object == object:
+						_refresh_force_panel()
+						_refresh_transform_controls()
+					_save_layout(true),
+			)
 	elif kind == "cabinet":
 		object.set("plc_mode", plc_mode)
 		object.connect(
@@ -5227,6 +6986,14 @@ func _create_sandbox_object(kind: String, position: Vector3, is_base: bool = fal
 					if is_instance_valid(c3d):
 						c3d.set("selector_auto", is_auto)
 						c3d.call("_update_selector"),
+		)
+		object.connect(
+			"dynamic_pot_changed",
+			func(val: float, io_id: String):
+				if object == _get_active_cabinet_node() and is_instance_valid(cabinet_layer):
+					var c3d := cabinet_layer.get("cabinet_3d") as Node3D
+					if is_instance_valid(c3d) and c3d.has_method("set_dynamic_pot"):
+						c3d.call("set_dynamic_pot", io_id, val),
 		)
 	elif kind == "sensor":
 		var area := object as Area3D
@@ -5272,6 +7039,7 @@ func _toggle_turn_direction() -> void:
 	):
 		sandbox_label.text = "Select a turn to reverse"
 		return
+	_record_undo_snapshot()
 	_set_turn_direction(selected_object, not selected_object.get_meta("reversed", false))
 	_refresh_transform_controls()
 	sandbox_label.text = "Turn: " + (
@@ -5288,6 +7056,7 @@ func _delete_selected() -> void:
 		if selected_object.has_meta("base_id"):
 			sandbox_label.text = "Base equipment can be moved and rotated"
 			return
+		_record_undo_snapshot()
 		var object := selected_object
 		_set_selection(null)
 		object.remove_from_group("sandbox_objects")
@@ -5313,6 +7082,7 @@ func _move_selected(delta: Vector3) -> void:
 	):
 		sandbox_label.text = "Cannot move: overlaps same type or outside floor"
 		return
+	_record_undo_snapshot()
 	if selected_object.get_meta("kind") in PRODUCT_KINDS:
 		selected_object.position = _product_world_position(selected_object.get_meta("kind"), target) + Vector3(
 			0,
@@ -5335,6 +7105,9 @@ func _move_selected_height(direction: int) -> void:
 		return
 	var previous := float(selected_object.get_meta("height_offset", 0.0))
 	var next := clampf(previous + 0.25 * direction, -5.0, 10.0)
+	if is_equal_approx(previous, next):
+		return
+	_record_undo_snapshot()
 	selected_object.position.y += next - previous
 	selected_object.set_meta("height_offset", next)
 	_refresh_transform_controls()
@@ -5366,6 +7139,7 @@ func _rotate_selected(steps: int) -> void:
 	):
 		sandbox_label.text = "Cannot rotate: overlaps same type or outside floor"
 		return
+	_record_undo_snapshot()
 	selected_object.rotation_degrees.y = new_angle
 	if selected_object.get_meta("kind") in PRODUCT_KINDS:
 		selected_object.set_meta("placed_rotation", new_angle)
@@ -5374,9 +7148,47 @@ func _rotate_selected(steps: int) -> void:
 	_save_layout(true)
 
 
-func _save_layout(quiet: bool = false) -> void:
+func _record_undo_snapshot(snap: Dictionary = {}) -> void:
 	if test_mode or _is_loading_settings or not is_inside_tree():
 		return
+	var data := snap if not snap.is_empty() else _build_layout_data()
+	undo_stack.append(data)
+	if undo_stack.size() > MAX_UNDO_STEPS:
+		undo_stack.remove_at(0)
+	redo_stack.clear()
+	_refresh_undo_buttons()
+
+
+func _refresh_undo_buttons() -> void:
+	if is_instance_valid(undo_button):
+		undo_button.disabled = undo_stack.is_empty()
+	if is_instance_valid(redo_button):
+		redo_button.disabled = redo_stack.is_empty()
+
+
+func _undo() -> void:
+	if not edit_mode or undo_stack.is_empty():
+		return
+	redo_stack.append(_build_layout_data())
+	var snap: Dictionary = undo_stack.pop_back()
+	_apply_layout_data(snap, true)
+	_refresh_undo_buttons()
+	_save_layout(true)
+	sandbox_label.text = "Undo (%d)" % undo_stack.size()
+
+
+func _redo() -> void:
+	if not edit_mode or redo_stack.is_empty():
+		return
+	undo_stack.append(_build_layout_data())
+	var snap: Dictionary = redo_stack.pop_back()
+	_apply_layout_data(snap, true)
+	_refresh_undo_buttons()
+	_save_layout(true)
+	sandbox_label.text = "Redo (%d)" % redo_stack.size()
+
+
+func _build_layout_data() -> Dictionary:
 	var objects: Array = []
 	for object in get_tree().get_nodes_in_group("sandbox_objects"):
 		var pos: Vector3 = object.get_meta("grid_position")
@@ -5412,23 +7224,28 @@ func _save_layout(quiet: bool = false) -> void:
 			elif kind == "emitter":
 				entry["box_mode"] = int(object.get("box_mode"))
 			elif kind == "cabinet" and object.has_method("get_customization"):
+				entry["modbus_input_reg"] = int(object.get_meta("modbus_input_reg", -1))
 				entry["cabinet_cfg"] = object.call("get_customization")
+			elif kind == "water_tank" and object.has_method("get_tank_config"):
+				entry["modbus_input_reg"] = int(object.get_meta("modbus_input_reg", -1))
+				entry["tank_cfg"] = object.call("get_tank_config")
 		objects.append(entry)
+	return {
+		"version": 1,
+		"workspace": {"width": workspace_width, "depth": workspace_depth},
+		"objects": objects,
+	}
+
+
+func _save_layout(quiet: bool = false) -> void:
+	if test_mode or _is_loading_settings or not is_inside_tree():
+		return
 	var file := FileAccess.open(SANDBOX_PATH, FileAccess.WRITE)
 	if file == null:
 		if not quiet:
 			sandbox_label.text = "Save failed"
 		return
-	file.store_string(
-		JSON.stringify(
-			{
-				"version": 1,
-				"workspace": { "width": workspace_width, "depth": workspace_depth },
-				"objects": objects,
-			},
-			"  ",
-		)
-	)
+	file.store_string(JSON.stringify(_build_layout_data(), "  "))
 	if not quiet:
 		sandbox_label.text = "Layout saved"
 
@@ -5443,7 +7260,7 @@ func _load_layout(auto_start: bool = false) -> void:
 		if not auto_start:
 			sandbox_label.text = "Invalid layout"
 		return
-	var workspace = data.get("workspace", { "width": 22, "depth": 15 })
+	var workspace = data.get("workspace", {"width": 22, "depth": 15})
 	if (
 		not workspace is Dictionary
 		or not (workspace.get("width") is float or workspace.get("width") is int)
@@ -5529,6 +7346,13 @@ func _load_layout(auto_start: bool = false) -> void:
 				return
 	if not auto_start:
 		_enter_edit_mode()
+	_apply_layout_data(data, auto_start)
+
+
+func _apply_layout_data(data: Dictionary, auto_start: bool = false) -> void:
+	var workspace = data.get("workspace", {"width": 22, "depth": 15})
+	var new_width := int(workspace.width)
+	var new_depth := int(workspace.depth)
 	_set_selection(null)
 	_set_workspace_size(new_width, new_depth)
 	for object in get_tree().get_nodes_in_group("sandbox_objects"):
@@ -5594,8 +7418,15 @@ func _load_layout(auto_start: bool = false) -> void:
 				if entry.has("box_mode"):
 					object.set("box_mode", int(entry.box_mode))
 			elif entry.kind == "cabinet":
+				if entry.has("modbus_input_reg"):
+					object.set_meta("modbus_input_reg", int(entry.modbus_input_reg))
 				if entry.has("cabinet_cfg") and entry.cabinet_cfg is Dictionary and object.has_method("apply_customization"):
 					object.call("apply_customization", entry.cabinet_cfg)
+			elif entry.kind == "water_tank":
+				if entry.has("modbus_input_reg"):
+					object.set_meta("modbus_input_reg", int(entry.modbus_input_reg))
+				if entry.has("tank_cfg") and entry.tank_cfg is Dictionary and object.has_method("apply_tank_config"):
+					object.call("apply_tank_config", entry.tank_cfg)
 	_restore_placed_products()
 	_refresh_io_status_list()
 	_sync_2d_cabinet_customization(_get_active_cabinet_node())

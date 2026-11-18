@@ -1,14 +1,34 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://objects/water_tank.gd" id="tank_script"]
+[ext_resource type="Shader" path="res://objects/water_stream.gdshader" id="stream_shader"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_body"]
-size = Vector3(1.42, 1.85, 1.42)
+size = Vector3(1.55, 1.85, 1.42)
 
 [sub_resource type="StandardMaterial3D" id="mat_steel"]
 albedo_color = Color(0.24, 0.3, 0.36, 1)
 metallic = 0.6
 roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="mat_pump_body"]
+albedo_color = Color(0.14, 0.32, 0.48, 1)
+metallic = 0.5
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_sensor_body"]
+albedo_color = Color(0.12, 0.15, 0.19, 1)
+metallic = 0.35
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="mat_valve_body"]
+albedo_color = Color(0.75, 0.56, 0.16, 1)
+metallic = 0.72
+roughness = 0.32
+
+[sub_resource type="StandardMaterial3D" id="mat_valve_handle"]
+albedo_color = Color(0.88, 0.18, 0.18, 1)
+roughness = 0.3
 
 [sub_resource type="StandardMaterial3D" id="mat_tank_glass"]
 transparency = 1
@@ -29,6 +49,34 @@ resource_local_to_scene = true
 albedo_color = Color(0.29, 0.35, 0.4, 1)
 emission_enabled = true
 emission = Color(0.95, 0.16, 0.16, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="mat_led_low"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.35, 0.4, 1)
+emission_enabled = true
+emission = Color(0.2, 0.85, 0.5, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="mat_led_mid"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.35, 0.4, 1)
+emission_enabled = true
+emission = Color(0.95, 0.75, 0.18, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="mat_led_high"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.35, 0.4, 1)
+emission_enabled = true
+emission = Color(0.95, 0.22, 0.22, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="mat_led_valve"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.35, 0.4, 1)
+emission_enabled = true
+emission = Color(0.2, 0.85, 0.95, 1)
 emission_energy_multiplier = 0.0
 
 [sub_resource type="CylinderMesh" id="mesh_tank_wall"]
@@ -58,17 +106,105 @@ bottom_radius = 0.07
 height = 0.28
 radial_segments = 16
 
+[sub_resource type="BoxMesh" id="mesh_pump"]
+size = Vector3(0.26, 0.18, 0.22)
+
+[sub_resource type="BoxMesh" id="mesh_sensor_housing"]
+size = Vector3(0.14, 0.06, 0.08)
+
+[sub_resource type="SphereMesh" id="mesh_sensor_led"]
+radius = 0.022
+height = 0.044
+radial_segments = 12
+rings = 6
+
+[sub_resource type="CylinderMesh" id="mesh_valve_body"]
+top_radius = 0.095
+bottom_radius = 0.095
+height = 0.14
+radial_segments = 16
+
+[sub_resource type="BoxMesh" id="mesh_valve_handle"]
+size = Vector3(0.18, 0.025, 0.032)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_valve"]
+size = Vector3(0.28, 0.32, 0.28)
+
 [sub_resource type="CylinderMesh" id="mesh_led"]
 top_radius = 0.05
 bottom_radius = 0.055
 height = 0.09
+
+[sub_resource type="CylinderMesh" id="mesh_drain_stream"]
+top_radius = 0.042
+bottom_radius = 0.028
+height = 0.44
+radial_segments = 12
+
+[sub_resource type="ShaderMaterial" id="mat_water_stream"]
+shader = ExtResource("stream_shader")
+shader_parameter/flow_speed = 3.8
+shader_parameter/water_color = Color(0.14, 0.72, 0.96, 0.78)
+shader_parameter/foam_color = Color(0.84, 0.96, 1, 0.92)
+
+[sub_resource type="ParticleProcessMaterial" id="part_splash_mat"]
+direction = Vector3(0.3, 1, 0)
+spread = 58.0
+initial_velocity_min = 0.65
+initial_velocity_max = 1.45
+gravity = Vector3(0, -9.8, 0)
+scale_min = 0.6
+scale_max = 1.3
+
+[sub_resource type="SphereMesh" id="mesh_splash_drop"]
+material = SubResource("mat_water")
+radius = 0.015
+height = 0.03
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderMesh" id="mesh_overflow_curtain"]
+top_radius = 0.635
+bottom_radius = 0.648
+height = 1.18
+radial_segments = 28
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="ShaderMaterial" id="mat_overflow_stream"]
+shader = ExtResource("stream_shader")
+shader_parameter/flow_speed = 4.6
+shader_parameter/water_color = Color(0.18, 0.76, 0.98, 0.56)
+shader_parameter/foam_color = Color(0.88, 0.98, 1, 0.9)
+
+[sub_resource type="ParticleProcessMaterial" id="part_overflow_mat"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 0.04
+emission_ring_radius = 0.65
+emission_ring_inner_radius = 0.58
+direction = Vector3(0, 1, 0)
+spread = 50.0
+initial_velocity_min = 0.2
+initial_velocity_max = 0.55
+gravity = Vector3(0, -9.8, 0)
+radial_velocity_min = 0.35
+radial_velocity_max = 0.85
+scale_min = 0.6
+scale_max = 1.3
+
+[sub_resource type="CylinderMesh" id="mesh_overflow_puddle"]
+top_radius = 0.85
+bottom_radius = 0.88
+height = 0.012
+radial_segments = 28
 
 [node name="WaterTank" type="StaticBody3D"]
 collision_layer = 3
 script = ExtResource("tank_script")
 
 [node name="BodyCollision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.925, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.925, 0)
 shape = SubResource("BoxShape3D_body")
 
 [node name="LegFL" type="MeshInstance3D" parent="."]
@@ -116,18 +252,144 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.68, 0)
 material_override = SubResource("mat_steel")
 mesh = SubResource("mesh_pipe")
 
-[node name="OutletPipe" type="MeshInstance3D" parent="."]
-transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0.66, 0.46, 0)
-material_override = SubResource("mat_steel")
-mesh = SubResource("mesh_pipe")
+[node name="PumpUnit" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.76, 0)
+material_override = SubResource("mat_pump_body")
+mesh = SubResource("mesh_pump")
 
 [node name="Indicator" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 1.62, 0)
 material_override = SubResource("mat_led")
 mesh = SubResource("mesh_led")
 
+[node name="SensorsGroup" type="Node3D" parent="."]
+
+[node name="SensorLow" type="MeshInstance3D" parent="SensorsGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, 0.56, 0.22)
+material_override = SubResource("mat_sensor_body")
+mesh = SubResource("mesh_sensor_housing")
+
+[node name="LowLED" type="MeshInstance3D" parent="SensorsGroup/SensorLow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0, 0.045)
+material_override = SubResource("mat_led_low")
+mesh = SubResource("mesh_sensor_led")
+
+[node name="LowTag" type="Label3D" parent="SensorsGroup/SensorLow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0, 0.04)
+billboard = 1
+pixel_size = 0.004
+modulate = Color(0.55, 0.95, 0.72, 1)
+text = "L"
+font_size = 20
+outline_size = 4
+
+[node name="SensorMid" type="MeshInstance3D" parent="SensorsGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, 0.89, 0.22)
+material_override = SubResource("mat_sensor_body")
+mesh = SubResource("mesh_sensor_housing")
+
+[node name="MidLED" type="MeshInstance3D" parent="SensorsGroup/SensorMid"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0, 0.045)
+material_override = SubResource("mat_led_mid")
+mesh = SubResource("mesh_sensor_led")
+
+[node name="MidTag" type="Label3D" parent="SensorsGroup/SensorMid"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0, 0.04)
+billboard = 1
+pixel_size = 0.004
+modulate = Color(0.98, 0.82, 0.32, 1)
+text = "M"
+font_size = 20
+outline_size = 4
+
+[node name="SensorHigh" type="MeshInstance3D" parent="SensorsGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, 1.275, 0.22)
+material_override = SubResource("mat_sensor_body")
+mesh = SubResource("mesh_sensor_housing")
+
+[node name="HighLED" type="MeshInstance3D" parent="SensorsGroup/SensorHigh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0, 0.045)
+material_override = SubResource("mat_led_high")
+mesh = SubResource("mesh_sensor_led")
+
+[node name="HighTag" type="Label3D" parent="SensorsGroup/SensorHigh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0, 0.04)
+billboard = 1
+pixel_size = 0.004
+modulate = Color(1, 0.45, 0.45, 1)
+text = "H"
+font_size = 20
+outline_size = 4
+
+[node name="OutletPipe" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0.66, 0.46, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_pipe")
+
+[node name="OutletValveGroup" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 0.46, 0)
+
+[node name="ValveBody" type="MeshInstance3D" parent="OutletValveGroup"]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0)
+material_override = SubResource("mat_valve_body")
+mesh = SubResource("mesh_valve_body")
+
+[node name="ValveHandlePivot" type="Node3D" parent="OutletValveGroup"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.11, 0)
+
+[node name="ValveHandle" type="MeshInstance3D" parent="OutletValveGroup/ValveHandlePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.04, 0, 0)
+material_override = SubResource("mat_valve_handle")
+mesh = SubResource("mesh_valve_handle")
+
+[node name="ValveLED" type="MeshInstance3D" parent="OutletValveGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07, 0.08)
+material_override = SubResource("mat_led_valve")
+mesh = SubResource("mesh_sensor_led")
+
+[node name="ValveArea" type="Area3D" parent="OutletValveGroup"]
+collision_layer = 2
+collision_mask = 0
+input_ray_pickable = true
+
+[node name="ValveCollision" type="CollisionShape3D" parent="OutletValveGroup/ValveArea"]
+shape = SubResource("BoxShape3D_valve")
+
+[node name="DrainStream" type="MeshInstance3D" parent="OutletValveGroup"]
+visible = false
+material_override = SubResource("mat_water_stream")
+mesh = SubResource("mesh_drain_stream")
+
+[node name="DrainSplash" type="GPUParticles3D" parent="OutletValveGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, -0.44, 0)
+emitting = false
+amount = 24
+lifetime = 0.36
+process_material = SubResource("part_splash_mat")
+draw_pass_1 = SubResource("mesh_splash_drop")
+
+[node name="OverflowCurtain" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.94, 0)
+visible = false
+material_override = SubResource("mat_overflow_stream")
+mesh = SubResource("mesh_overflow_curtain")
+
+[node name="OverflowSplash" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.53, 0)
+emitting = false
+amount = 48
+lifetime = 0.55
+process_material = SubResource("part_overflow_mat")
+draw_pass_1 = SubResource("mesh_splash_drop")
+
+[node name="OverflowPuddle" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.008, 0)
+visible = false
+material_override = SubResource("mat_water")
+mesh = SubResource("mesh_overflow_puddle")
+
 [node name="LevelLabel" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.98, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.02, 0)
 billboard = 1
 pixel_size = 0.0045
 modulate = Color(0.49, 0.91, 1, 1)

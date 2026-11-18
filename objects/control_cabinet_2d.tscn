@@ -15,6 +15,7 @@ environment = SubResource("Environment_studio")
 script = ExtResource("1_script")
 
 [node name="CabinetPanel" type="PanelContainer" parent="." unique_id=1924915937]
+visible = false
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -46,10 +47,10 @@ own_world_3d = true
 world_3d = SubResource("World3D_cabinet")
 transparent_bg = true
 handle_input_locally = false
-msaa_3d = 2
+msaa_3d = 1
 physics_object_picking = true
 size = Vector2i(212, 360)
-render_target_update_mode = 4
+render_target_update_mode = 3
 
 [node name="StudioLight" type="DirectionalLight3D" parent="CabinetPanel/Margin/VBox/ViewportContainer/CabinetViewport" unique_id=1979824137]
 transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0.6, 1.4, 2)

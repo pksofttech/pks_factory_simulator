@@ -1,7 +1,7 @@
 extends Area3D
 
 @export var plc_mode: bool = false
-@export var active: bool = true:
+@export var active: bool = false:
 	set(value):
 		active = value
 		_update_indicator()

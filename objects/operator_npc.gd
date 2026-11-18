@@ -5,6 +5,7 @@ extends Node3D
 @export var is_tester: bool = false
 @export var is_safety: bool = false
 @export var start_target_offset: int = 0
+@export var chat_enabled: bool = true
 
 const CELL_SIZE := 0.5
 const NPC_CLEARANCE := 0.55
@@ -37,6 +38,8 @@ var _last_pos: Vector3 = Vector3.ZERO
 var _was_edit_mode: bool = false
 var _current_target: Node3D = null
 var _alert_check_timer: float = 0.0
+var _last_status_text: String = ""
+var _last_status_color: Color = Color.TRANSPARENT
 var _astar := AStarGrid2D.new()
 var _half_w: float = 19.0
 var _half_d: float = 19.0
@@ -315,9 +318,7 @@ func _physics_process(delta: float) -> void:
 	if in_edit:
 		_was_edit_mode = true
 		_animate_idle(delta)
-		if status_label != null:
-			status_label.text = "Standby (Edit Mode)"
-			status_label.modulate = Color("9cb3c4")
+		_set_status_label("Standby (Edit Mode)", Color("9cb3c4"))
 		return
 	if _was_edit_mode:
 		_was_edit_mode = false
@@ -357,13 +358,13 @@ func _physics_process(delta: float) -> void:
 	if _chatting:
 		_chat_timer -= delta
 		_animate_idle(delta)
+		var pre_pos := global_position
 		_separate_from_npcs()
-		_push_out_of_equipment()
+		if global_position.distance_squared_to(pre_pos) > 0.000001:
+			_push_out_of_equipment()
 		if is_instance_valid(_chat_partner):
 			_face_point(Vector3(_chat_partner.global_position.x, global_position.y, _chat_partner.global_position.z), delta * 8.0)
-		if status_label != null:
-			status_label.text = _chat_text
-			status_label.modulate = Color("66e88a") if is_safety else (Color("ffd57e") if is_tester else Color("8ce8ff"))
+		_set_status_label(_chat_text, Color("66e88a") if is_safety else (Color("ffd57e") if is_tester else Color("8ce8ff")))
 		if _chat_timer <= 0.0:
 			_chatting = false
 			_chat_partner = null
@@ -374,8 +375,10 @@ func _physics_process(delta: float) -> void:
 	if _inspecting:
 		_inspect_timer -= delta
 		_animate_idle(delta)
+		var pre_pos := global_position
 		_separate_from_npcs()
-		_push_out_of_equipment()
+		if global_position.distance_squared_to(pre_pos) > 0.000001:
+			_push_out_of_equipment()
 		var look_target := Vector3(target.global_position.x, global_position.y, target.global_position.z)
 		_face_point(look_target, delta * 6.0)
 		_update_status_label(target, true)
@@ -470,6 +473,8 @@ func _try_start_chat() -> bool:
 	return false
 
 func start_chat(partner: Node3D, text_line: String, duration: float = 2.2, is_reply: bool = false) -> void:
+	if not chat_enabled:
+		return
 	_inspecting = false
 	_chatting = true
 	_chat_partner = partner
@@ -619,6 +624,17 @@ func _animate_idle(delta: float) -> void:
 	if head_node != null:
 		head_node.rotation.x = sin(_walk_phase) * 0.12 + 0.08
 
+func _set_status_label(txt: String, col: Color) -> void:
+	if status_label == null:
+		return
+	if txt != _last_status_text:
+		_last_status_text = txt
+		status_label.text = txt
+	if col != _last_status_color:
+		_last_status_color = col
+		status_label.modulate = col
+
+
 func _update_status_label(target: Node3D, checking: bool) -> void:
 	if status_label == null or not is_instance_valid(target):
 		return
@@ -636,35 +652,26 @@ func _update_status_label(target: Node3D, checking: bool) -> void:
 		state_str = "REJ:%d" % int(target.get("rejected_count"))
 	if is_safety:
 		if kind == "light_curtain" and is_active:
-			status_label.text = "ALERT: %s TRIPPED!" % target.name
-			status_label.modulate = Color("ff6b6b")
+			_set_status_label("ALERT: %s TRIPPED!" % target.name, Color("ff6b6b"))
 			return
 		if kind == "stack_light" and bool(target.get("lamp_red_on")):
-			status_label.text = "ALERT: %s RED ALARM!" % target.name
-			status_label.modulate = Color("ff6b6b")
+			_set_status_label("ALERT: %s RED ALARM!" % target.name, Color("ff6b6b"))
 			return
 		if kind == "cabinet" and bool(target.get("estop_active")):
-			status_label.text = "ALERT: E-STOP ACTIVE!"
-			status_label.modulate = Color("ff6b6b")
+			_set_status_label("ALERT: E-STOP ACTIVE!", Color("ff6b6b"))
 			return
 		if checking:
-			status_label.text = "Safety Check: %s [%s]" % [target.name, state_str]
-			status_label.modulate = Color("66e88a") if not is_active else Color("ff9e5e")
+			_set_status_label("Safety Check: %s [%s]" % [target.name, state_str], Color("66e88a") if not is_active else Color("ff9e5e"))
 		else:
-			status_label.text = "Safety -> %s" % target.name
-			status_label.modulate = Color("8cf5aa")
+			_set_status_label("Safety -> %s" % target.name, Color("8cf5aa"))
 		return
 	if is_tester:
 		if checking:
-			status_label.text = "Supervisor Audit: %s [%s]" % [target.name, state_str]
-			status_label.modulate = Color("66e0a3") if is_active else Color("f7d070")
+			_set_status_label("Supervisor Audit: %s [%s]" % [target.name, state_str], Color("66e0a3") if is_active else Color("f7d070"))
 		else:
-			status_label.text = "Supervisor -> %s" % target.name
-			status_label.modulate = Color("f5e6b3")
+			_set_status_label("Supervisor -> %s" % target.name, Color("f5e6b3"))
 		return
 	if checking:
-		status_label.text = "Inspecting: %s [%s]" % [target.name, state_str]
-		status_label.modulate = Color("66e0a3") if is_active else Color("f7d070")
+		_set_status_label("Inspecting: %s [%s]" % [target.name, state_str], Color("66e0a3") if is_active else Color("f7d070"))
 	else:
-		status_label.text = "Operator -> %s" % target.name
-		status_label.modulate = Color("bfe3f7")
+		_set_status_label("Operator -> %s" % target.name, Color("bfe3f7"))

@@ -1,6 +1,6 @@
 extends Area3D
 
-@export var active: bool = true:
+@export var active: bool = false:
 	set(value):
 		active = value
 		_update_indicator()

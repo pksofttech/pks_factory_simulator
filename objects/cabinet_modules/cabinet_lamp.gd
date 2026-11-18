@@ -2,18 +2,24 @@ extends Node3D
 
 @export var label_text: String = "LAMP":
 	set(value):
+		if label_text == value:
+			return
 		label_text = value
 		if is_node_ready():
 			_apply_visuals()
 
 @export var lamp_color: Color = Color("18d97c"):
 	set(value):
+		if lamp_color == value:
+			return
 		lamp_color = value
 		if is_node_ready():
 			_apply_visuals()
 
 @export var lit: bool = false:
 	set(value):
+		if lit == value:
+			return
 		lit = value
 		if is_node_ready():
 			_apply_visuals()

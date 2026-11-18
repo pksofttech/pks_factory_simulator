@@ -10,7 +10,6 @@ enum State { IDLE, EXTENDING, RETRACTING }
 
 var state: State = State.IDLE
 var extension := 0.0
-var hold_timer := 0.0
 var is_extended := false
 var is_retracted := true
 var paddle: Node3D
@@ -31,41 +30,18 @@ func _physics_process(delta: float) -> void:
 	var scene := get_parent()
 	var is_running: bool = scene != null and scene.get("running") != null and bool(scene.get("running"))
 
-	if plc_mode:
-		if is_running and active:
-			if state != State.EXTENDING:
-				var fa := get_node_or_null("/root/FactoryAudio")
-				if fa != null:
-					fa.call("play_one_shot", self, "pneumatic", -9.0, 14.0)
-			state = State.EXTENDING
-			if extension < stroke_length:
-				extension = minf(extension + push_speed * delta, stroke_length)
-				_push_overlapping_boxes()
-		else:
-			state = State.RETRACTING if extension > 0.0 else State.IDLE
-			extension = maxf(extension - retract_speed * delta, 0.0)
+	if is_running and active:
+		if state != State.EXTENDING:
+			var fa := get_node_or_null("/root/FactoryAudio")
+			if fa != null:
+				fa.call("play_one_shot", self, "pneumatic", -9.0, 14.0)
+		state = State.EXTENDING
+		if extension < stroke_length:
+			extension = minf(extension + push_speed * delta, stroke_length)
+			_push_overlapping_boxes()
 	else:
-		match state:
-			State.IDLE:
-				if is_running and _has_target_box():
-					state = State.EXTENDING
-					var fa := get_node_or_null("/root/FactoryAudio")
-					if fa != null:
-						fa.call("play_one_shot", self, "pneumatic", -9.0, 14.0)
-			State.EXTENDING:
-				if extension < stroke_length:
-					extension = minf(extension + push_speed * delta, stroke_length)
-					_push_overlapping_boxes()
-				else:
-					hold_timer += delta
-					if hold_timer >= 0.08:
-						hold_timer = 0.0
-						state = State.RETRACTING
-			State.RETRACTING:
-				extension = maxf(extension - retract_speed * delta, 0.0)
-				if is_zero_approx(extension):
-					extension = 0.0
-					state = State.IDLE
+		state = State.RETRACTING if extension > 0.0 else State.IDLE
+		extension = maxf(extension - retract_speed * delta, 0.0)
 
 	is_extended = extension >= stroke_length - 0.01
 	is_retracted = extension <= 0.01
@@ -73,12 +49,6 @@ func _physics_process(delta: float) -> void:
 		paddle.position.z = paddle_base_z + extension
 	if paddle_col != null:
 		paddle_col.position.z = paddle_col_base_z + extension
-
-func _has_target_box() -> bool:
-	for body in trigger_zone.get_overlapping_bodies():
-		if body is RigidBody3D and body.is_in_group("product_boxes") and not body.freeze:
-			return true
-	return false
 
 func _push_overlapping_boxes() -> void:
 	var push_dir := global_basis.z.normalized()

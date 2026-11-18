@@ -9,6 +9,16 @@ enum Mode { SERVER, CLIENT }
 const REGISTER_COUNT := 256
 const CLIENT_BIT_WINDOW := 64
 
+@export var enabled: bool = true:
+	set(value):
+		if enabled == value:
+			return
+		enabled = value
+		if is_inside_tree():
+			if enabled:
+				start_service()
+			else:
+				stop_service()
 @export var mode: Mode = Mode.SERVER
 @export var port: int = 1502
 @export var bind_address: String = "0.0.0.0"
@@ -46,11 +56,13 @@ func _ready() -> void:
 	holding_registers.fill(0)
 	input_registers.resize(REGISTER_COUNT)
 	input_registers.fill(0)
-	if auto_start:
+	if enabled and auto_start:
 		start_service()
 
 func start_service() -> Error:
 	stop_service()
+	if not enabled:
+		return OK
 	if mode == Mode.SERVER:
 		return start_server()
 	return _connect_client()
@@ -101,6 +113,8 @@ func client_count() -> int:
 	return _clients.size()
 
 func status_summary() -> String:
+	if not enabled:
+		return "Modbus: OFF"
 	if mode == Mode.SERVER:
 		return "Modbus Srv :%d (%d)" % [port, _clients.size()]
 	var st := "OK" if is_client_connected() else "WAIT"
@@ -138,6 +152,8 @@ func set_input_register(address: int, value: int) -> void:
 		input_registers[address] = value & 0xFFFF
 
 func _process(delta: float) -> void:
+	if not enabled:
+		return
 	if mode == Mode.SERVER:
 		_process_server()
 	else:

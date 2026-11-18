@@ -28,11 +28,20 @@ func _physics_process(_delta: float) -> void:
 			tripped = true
 			break
 	if not tripped:
-		var inv := global_transform.affine_inverse()
+		var inv: Transform3D
+		var has_inv := false
 		for npc in get_tree().get_nodes_in_group("factory_npcs"):
 			if not is_instance_valid(npc) or not (npc is Node3D):
 				continue
-			var local_pt := inv * (npc as Node3D).global_position
+			var npc_node := npc as Node3D
+			if not npc_node.visible:
+				continue
+			if global_position.distance_squared_to(npc_node.global_position) > 4.0:
+				continue
+			if not has_inv:
+				inv = global_transform.affine_inverse()
+				has_inv = true
+			var local_pt := inv * npc_node.global_position
 			if absf(local_pt.x) <= 0.42 and absf(local_pt.z) <= 0.82:
 				tripped = true
 				break

@@ -51,7 +51,8 @@ func _process(delta: float) -> void:
 	is_pressed = held or pulse > 0.0
 	if cap_mesh != null:
 		var target_z := CAP_Z_PRESSED if is_pressed else CAP_Z_RELEASED
-		cap_mesh.position.z = move_toward(cap_mesh.position.z, target_z, delta * CAP_TRAVEL_SPEED)
+		if not is_equal_approx(cap_mesh.position.z, target_z):
+			cap_mesh.position.z = move_toward(cap_mesh.position.z, target_z, delta * CAP_TRAVEL_SPEED)
 
 func _can_click() -> bool:
 	var cabinet := get_parent()

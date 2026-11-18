@@ -4,6 +4,10 @@ signal start_triggered
 signal stop_triggered
 signal estop_toggled(active: bool)
 signal mode_toggled
+signal dynamic_button_changed(io_id: String, active: bool)
+signal dynamic_switch_changed(io_id: String, active: bool)
+signal dynamic_switch_3pos_changed(io_id: String, pos: int)
+signal dynamic_pot_changed(io_id: String, val: float)
 
 var start_pulse := 0.0
 var stop_pulse := 0.0
@@ -43,6 +47,21 @@ func _ready() -> void:
 		cabinet_3d.connect("selector_toggled_3d", func(active: bool):
 			switch_auto_active = active
 			mode_toggled.emit()
+		)
+		cabinet_3d.connect("dynamic_button_pressed", func(io_id: String):
+			dynamic_button_changed.emit(io_id, true)
+		)
+		cabinet_3d.connect("dynamic_button_released", func(io_id: String):
+			dynamic_button_changed.emit(io_id, false)
+		)
+		cabinet_3d.connect("dynamic_switch_toggled", func(active: bool, io_id: String):
+			dynamic_switch_changed.emit(io_id, active)
+		)
+		cabinet_3d.connect("dynamic_switch_3pos_changed", func(pos: int, io_id: String):
+			dynamic_switch_3pos_changed.emit(io_id, pos)
+		)
+		cabinet_3d.connect("dynamic_pot_changed", func(val: float, io_id: String):
+			dynamic_pot_changed.emit(io_id, val)
 		)
 
 func _process(delta: float) -> void:

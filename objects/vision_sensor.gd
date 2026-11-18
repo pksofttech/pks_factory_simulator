@@ -14,6 +14,7 @@ signal state_changed(active: bool)
 var _detected_bodies: Array[Node3D] = []
 
 @onready var indicator: MeshInstance3D = $Indicator
+@onready var ring_light_led: MeshInstance3D = get_node_or_null("Lens/RingLightLED")
 @onready var scan_beam: MeshInstance3D = $ScanBeam
 @onready var mode_label: Label3D = $ModeLabel
 
@@ -81,6 +82,13 @@ func set_detected(is_active: bool) -> void:
 			mat.emission_enabled = true
 			mat.emission = col
 			mat.emission_energy_multiplier = 2.6 if active else 0.9
+	if ring_light_led != null:
+		var rmat := ring_light_led.material_override as StandardMaterial3D
+		if rmat != null:
+			var rcol := Color("ffffff") if active else Color("b3f0ff")
+			rmat.albedo_color = rcol
+			rmat.emission = rcol
+			rmat.emission_energy_multiplier = 3.0 if active else 1.1
 	if scan_beam != null:
 		var bmat := scan_beam.material_override as StandardMaterial3D
 		if bmat != null:

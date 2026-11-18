@@ -7,14 +7,10 @@ const SWING_OPEN_DEG := 90.0
 
 @export var active: bool = false
 @export var plc_mode: bool = false
-@export var hold_duration: float = 1.6
-@export var pass_duration: float = 1.3
 @export var swing_speed_deg: float = 360.0
-@export var manual_hold: bool = false
 
 var gate_state: GateState = GateState.BLOCKING
 var swing_deg: float = SWING_CLOSED_DEG
-var state_timer := 0.0
 var part_at_gate := false
 var is_open := false
 var swing_arm: Node3D
@@ -22,7 +18,6 @@ var indicator_mat: StandardMaterial3D
 
 @onready var gate_body: AnimatableBody3D = $GateBody
 @onready var queue_sensor: Area3D = $QueueSensor
-@onready var clearance_zone: Area3D = $ClearanceZone
 @onready var indicator: MeshInstance3D = $Indicator
 
 func _ready() -> void:
@@ -37,34 +32,15 @@ func _physics_process(delta: float) -> void:
 	var is_running: bool = scene != null and bool(scene.get("running"))
 	part_at_gate = _has_box(queue_sensor)
 
-	if plc_mode:
-		var next_state := GateState.OPEN if (is_running and active) else GateState.BLOCKING
-		if next_state != gate_state:
-			gate_state = next_state
-			if gate_state == GateState.OPEN:
-				_wake_queued_boxes()
-			var fa := get_node_or_null("/root/FactoryAudio")
-			if fa != null:
-				fa.call("play_one_shot", self, "pneumatic", -11.0, 14.0)
-			_update_indicator()
-	elif is_running:
-		match gate_state:
-			GateState.BLOCKING:
-				if not manual_hold and part_at_gate and not _has_box(clearance_zone):
-					state_timer += delta
-					if state_timer >= hold_duration:
-						state_timer = 0.0
-						gate_state = GateState.OPEN
-						_wake_queued_boxes()
-						_update_indicator()
-				else:
-					state_timer = 0.0
-			GateState.OPEN:
-				state_timer += delta
-				if state_timer >= pass_duration:
-					state_timer = 0.0
-					gate_state = GateState.BLOCKING
-					_update_indicator()
+	var next_state := GateState.OPEN if (is_running and active) else GateState.BLOCKING
+	if next_state != gate_state:
+		gate_state = next_state
+		if gate_state == GateState.OPEN:
+			_wake_queued_boxes()
+		var fa := get_node_or_null("/root/FactoryAudio")
+		if fa != null:
+			fa.call("play_one_shot", self, "pneumatic", -11.0, 14.0)
+		_update_indicator()
 
 	is_open = gate_state == GateState.OPEN
 	var target_deg := SWING_CLOSED_DEG if gate_state == GateState.BLOCKING else SWING_OPEN_DEG

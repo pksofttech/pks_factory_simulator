@@ -6,69 +6,133 @@
 size = Vector3(0.42, 0.55, 0.95)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pick_post"]
-size = Vector3(0.28, 2.1, 0.28)
+size = Vector3(0.3, 2.1, 0.3)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pick_head"]
-size = Vector3(0.32, 0.35, 1.05)
+size = Vector3(0.34, 0.4, 1.05)
 
 [sub_resource type="StandardMaterial3D" id="mat_steel"]
-albedo_color = Color(0.24, 0.29, 0.35, 1)
-metallic = 0.65
-roughness = 0.38
+albedo_color = Color(0.22, 0.27, 0.33, 1)
+metallic = 0.72
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="mat_alu_profile"]
+albedo_color = Color(0.56, 0.61, 0.67, 1)
+metallic = 0.78
+roughness = 0.28
 
 [sub_resource type="StandardMaterial3D" id="mat_cam_body"]
-albedo_color = Color(0.12, 0.16, 0.22, 1)
-metallic = 0.35
-roughness = 0.4
+albedo_color = Color(0.11, 0.14, 0.19, 1)
+metallic = 0.45
+roughness = 0.36
 
 [sub_resource type="StandardMaterial3D" id="mat_lens"]
-albedo_color = Color(0.08, 0.32, 0.55, 1)
-metallic = 0.8
-roughness = 0.15
+albedo_color = Color(0.06, 0.28, 0.52, 1)
+metallic = 0.85
+roughness = 0.1
 
 [sub_resource type="StandardMaterial3D" id="mat_led"]
 resource_local_to_scene = true
 albedo_color = Color(0.16, 0.78, 1, 1)
 emission_enabled = true
 emission = Color(0.16, 0.78, 1, 1)
-emission_energy_multiplier = 0.9
+emission_energy_multiplier = 1.1
+
+[sub_resource type="StandardMaterial3D" id="mat_ring_led"]
+resource_local_to_scene = true
+albedo_color = Color(0.85, 0.96, 1, 1)
+emission_enabled = true
+emission = Color(0.7, 0.94, 1, 1)
+emission_energy_multiplier = 1.4
 
 [sub_resource type="StandardMaterial3D" id="mat_beam"]
 resource_local_to_scene = true
 transparency = 1
-albedo_color = Color(0.15, 0.78, 1, 0.16)
+cull_mode = 2
+albedo_color = Color(0.15, 0.78, 1, 0.15)
 emission_enabled = true
 emission = Color(0.15, 0.78, 1, 1)
-emission_energy_multiplier = 0.5
+emission_energy_multiplier = 0.55
 
 [sub_resource type="BoxMesh" id="mesh_base"]
-size = Vector3(0.28, 0.06, 0.28)
+size = Vector3(0.3, 0.04, 0.3)
 
-[sub_resource type="CylinderMesh" id="mesh_post"]
-top_radius = 0.045
-bottom_radius = 0.05
-height = 2.05
+[sub_resource type="BoxMesh" id="mesh_collar"]
+size = Vector3(0.14, 0.07, 0.14)
+
+[sub_resource type="CylinderMesh" id="mesh_bolt"]
+top_radius = 0.015
+bottom_radius = 0.015
+height = 0.025
+radial_segments = 8
+
+[sub_resource type="BoxMesh" id="mesh_post"]
+size = Vector3(0.085, 2.02, 0.085)
 
 [sub_resource type="BoxMesh" id="mesh_arm"]
-size = Vector3(0.08, 0.08, 0.95)
+size = Vector3(0.07, 0.07, 0.96)
+
+[sub_resource type="BoxMesh" id="mesh_gusset"]
+size = Vector3(0.055, 0.04, 0.38)
+
+[sub_resource type="BoxMesh" id="mesh_bracket"]
+size = Vector3(0.21, 0.05, 0.12)
 
 [sub_resource type="BoxMesh" id="mesh_cam"]
-size = Vector3(0.22, 0.16, 0.24)
+size = Vector3(0.18, 0.13, 0.22)
 
-[sub_resource type="CylinderMesh" id="mesh_lens"]
-top_radius = 0.065
-bottom_radius = 0.055
-height = 0.08
+[sub_resource type="BoxMesh" id="mesh_fin"]
+size = Vector3(0.16, 0.022, 0.018)
+
+[sub_resource type="BoxMesh" id="mesh_status_bar"]
+size = Vector3(0.016, 0.032, 0.16)
+
+[sub_resource type="CylinderMesh" id="mesh_m12"]
+top_radius = 0.022
+bottom_radius = 0.022
+height = 0.05
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="mesh_lens_barrel"]
+top_radius = 0.062
+bottom_radius = 0.058
+height = 0.07
+radial_segments = 24
+
+[sub_resource type="CylinderMesh" id="mesh_lens_glass"]
+top_radius = 0.048
+bottom_radius = 0.048
+height = 0.02
+radial_segments = 24
+
+[sub_resource type="CylinderMesh" id="mesh_ring_housing"]
+top_radius = 0.1
+bottom_radius = 0.105
+height = 0.045
+radial_segments = 28
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="TorusMesh" id="mesh_ring_led"]
+inner_radius = 0.064
+outer_radius = 0.09
+rings = 24
+ring_segments = 10
 
 [sub_resource type="CylinderMesh" id="mesh_led"]
-top_radius = 0.04
-bottom_radius = 0.045
-height = 0.05
+top_radius = 0.028
+bottom_radius = 0.032
+height = 0.035
+radial_segments = 16
 
-[sub_resource type="CylinderMesh" id="mesh_beam"]
-top_radius = 0.08
-bottom_radius = 0.26
-height = 0.82
+[sub_resource type="CylinderMesh" id="mesh_beam_fov"]
+top_radius = 0.095
+bottom_radius = 0.34
+height = 0.84
+radial_segments = 4
+rings = 1
+cap_top = false
+cap_bottom = false
 
 [node name="VisionSensor" type="Area3D"]
 collision_layer = 2
@@ -91,42 +155,122 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0)
 shape = SubResource("BoxShape3D_zone")
 
 [node name="BasePlate" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0.92)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0.92)
 material_override = SubResource("mat_steel")
 mesh = SubResource("mesh_base")
 
+[node name="PostCollar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0.92)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_collar")
+
+[node name="BoltFL" type="MeshInstance3D" parent="BasePlate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.105, 0.022, -0.105)
+material_override = SubResource("mat_alu_profile")
+mesh = SubResource("mesh_bolt")
+
+[node name="BoltFR" type="MeshInstance3D" parent="BasePlate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105, 0.022, -0.105)
+material_override = SubResource("mat_alu_profile")
+mesh = SubResource("mesh_bolt")
+
+[node name="BoltBL" type="MeshInstance3D" parent="BasePlate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.105, 0.022, 0.105)
+material_override = SubResource("mat_alu_profile")
+mesh = SubResource("mesh_bolt")
+
+[node name="BoltBR" type="MeshInstance3D" parent="BasePlate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105, 0.022, 0.105)
+material_override = SubResource("mat_alu_profile")
+mesh = SubResource("mesh_bolt")
+
 [node name="Post" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.92)
-material_override = SubResource("mat_steel")
+material_override = SubResource("mat_alu_profile")
 mesh = SubResource("mesh_post")
 
 [node name="BoomArm" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04, 0.48)
-material_override = SubResource("mat_steel")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.02, 0.48)
+material_override = SubResource("mat_alu_profile")
 mesh = SubResource("mesh_arm")
 
+[node name="GussetBracket" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 1.88, 0.78)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_gusset")
+
+[node name="CamMountBracket" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.97, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_bracket")
+
 [node name="CameraBody" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.94, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
 material_override = SubResource("mat_cam_body")
 mesh = SubResource("mesh_cam")
 
+[node name="CoolingFin1" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.072, -0.055)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_fin")
+
+[node name="CoolingFin2" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.072, -0.015)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_fin")
+
+[node name="CoolingFin3" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.072, 0.025)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_fin")
+
+[node name="M12Plug" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.04, 0.01, 0.13)
+material_override = SubResource("mat_alu_profile")
+mesh = SubResource("mesh_m12")
+
+[node name="StatusBarL" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.092, 0.025, 0)
+material_override = SubResource("mat_led")
+mesh = SubResource("mesh_status_bar")
+
+[node name="StatusBarR" type="MeshInstance3D" parent="CameraBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.092, 0.025, 0)
+material_override = SubResource("mat_led")
+mesh = SubResource("mesh_status_bar")
+
 [node name="Lens" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.84, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.81, 0)
+material_override = SubResource("mat_cam_body")
+mesh = SubResource("mesh_lens_barrel")
+
+[node name="LensGlass" type="MeshInstance3D" parent="Lens"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0)
 material_override = SubResource("mat_lens")
-mesh = SubResource("mesh_lens")
+mesh = SubResource("mesh_lens_glass")
+
+[node name="RingLightHood" type="MeshInstance3D" parent="Lens"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.025, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_ring_housing")
+
+[node name="RingLightLED" type="MeshInstance3D" parent="Lens"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
+material_override = SubResource("mat_ring_led")
+mesh = SubResource("mesh_ring_led")
 
 [node name="Indicator" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.07, 0)
 material_override = SubResource("mat_led")
 mesh = SubResource("mesh_led")
 
 [node name="ScanBeam" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.42, 0)
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 1.35, 0)
 material_override = SubResource("mat_beam")
-mesh = SubResource("mesh_beam")
+mesh = SubResource("mesh_beam_fov")
 
 [node name="ModeLabel" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.22, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.24, 0)
 billboard = 1
 pixel_size = 0.0045
 modulate = Color(0.55, 0.92, 1, 1)
