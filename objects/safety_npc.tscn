@@ -1,0 +1,380 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/operator_npc.gd" id="npc_script"]
+
+[sub_resource type="StandardMaterial3D" id="mat_skin"]
+albedo_color = Color(0.89, 0.73, 0.59, 1)
+roughness = 0.65
+
+[sub_resource type="StandardMaterial3D" id="mat_shirt"]
+albedo_color = Color(0.16, 0.24, 0.3, 1)
+roughness = 0.72
+
+[sub_resource type="StandardMaterial3D" id="mat_vest"]
+albedo_color = Color(0.24, 0.88, 0.32, 1)
+roughness = 0.52
+
+[sub_resource type="StandardMaterial3D" id="mat_stripe"]
+albedo_color = Color(0.95, 0.98, 0.96, 1)
+roughness = 0.22
+metallic = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_pants"]
+albedo_color = Color(0.14, 0.18, 0.22, 1)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="mat_boots"]
+albedo_color = Color(0.11, 0.12, 0.14, 1)
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="mat_hat"]
+albedo_color = Color(0.14, 0.78, 0.36, 1)
+roughness = 0.28
+
+[sub_resource type="StandardMaterial3D" id="mat_white"]
+albedo_color = Color(0.98, 0.98, 0.98, 1)
+roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="mat_black"]
+albedo_color = Color(0.1, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_clipboard"]
+albedo_color = Color(0.48, 0.3, 0.16, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="mat_paper"]
+albedo_color = Color(0.97, 0.96, 0.92, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_clip"]
+albedo_color = Color(0.75, 0.78, 0.82, 1)
+metallic = 0.75
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="mat_pen"]
+albedo_color = Color(0.86, 0.2, 0.2, 1)
+roughness = 0.4
+
+[sub_resource type="CylinderMesh" id="mesh_chest"]
+top_radius = 0.185
+bottom_radius = 0.145
+height = 0.32
+radial_segments = 20
+
+[sub_resource type="CylinderMesh" id="mesh_waist"]
+top_radius = 0.148
+bottom_radius = 0.155
+height = 0.22
+radial_segments = 20
+
+[sub_resource type="CylinderMesh" id="mesh_stripe"]
+top_radius = 0.153
+bottom_radius = 0.153
+height = 0.055
+radial_segments = 20
+
+[sub_resource type="SphereMesh" id="mesh_shoulder"]
+radius = 0.075
+height = 0.15
+radial_segments = 16
+rings = 8
+
+[sub_resource type="CylinderMesh" id="mesh_neck"]
+top_radius = 0.052
+bottom_radius = 0.058
+height = 0.11
+radial_segments = 16
+
+[sub_resource type="CapsuleMesh" id="mesh_thigh"]
+radius = 0.074
+height = 0.42
+radial_segments = 16
+
+[sub_resource type="CapsuleMesh" id="mesh_shin"]
+radius = 0.062
+height = 0.42
+radial_segments = 16
+
+[sub_resource type="CapsuleMesh" id="mesh_boot"]
+radius = 0.062
+height = 0.22
+radial_segments = 16
+
+[sub_resource type="CapsuleMesh" id="mesh_upper_arm"]
+radius = 0.054
+height = 0.28
+radial_segments = 14
+
+[sub_resource type="CapsuleMesh" id="mesh_forearm"]
+radius = 0.044
+height = 0.26
+radial_segments = 14
+
+[sub_resource type="SphereMesh" id="mesh_hand"]
+radius = 0.044
+height = 0.09
+radial_segments = 12
+rings = 8
+
+[sub_resource type="SphereMesh" id="mesh_head"]
+radius = 0.135
+height = 0.29
+radial_segments = 20
+rings = 12
+
+[sub_resource type="SphereMesh" id="mesh_ear"]
+radius = 0.028
+height = 0.056
+radial_segments = 10
+rings = 6
+
+[sub_resource type="SphereMesh" id="mesh_nose"]
+radius = 0.02
+height = 0.045
+radial_segments = 10
+rings = 6
+
+[sub_resource type="SphereMesh" id="mesh_eye_white"]
+radius = 0.02
+height = 0.036
+
+[sub_resource type="SphereMesh" id="mesh_pupil"]
+radius = 0.011
+height = 0.022
+
+[sub_resource type="CylinderMesh" id="mesh_hat_dome"]
+top_radius = 0.125
+bottom_radius = 0.158
+height = 0.115
+radial_segments = 20
+
+[sub_resource type="BoxMesh" id="mesh_hat_brim"]
+size = Vector3(0.29, 0.022, 0.11)
+
+[sub_resource type="BoxMesh" id="mesh_clipboard"]
+size = Vector3(0.23, 0.016, 0.31)
+
+[sub_resource type="BoxMesh" id="mesh_paper"]
+size = Vector3(0.195, 0.008, 0.26)
+
+[sub_resource type="BoxMesh" id="mesh_clip"]
+size = Vector3(0.09, 0.018, 0.032)
+
+[sub_resource type="BoxMesh" id="mesh_line"]
+size = Vector3(0.14, 0.004, 0.014)
+
+[sub_resource type="CylinderMesh" id="mesh_pen"]
+top_radius = 0.008
+bottom_radius = 0.008
+height = 0.16
+radial_segments = 10
+
+[node name="SafetyNPC" type="Node3D"]
+script = ExtResource("npc_script")
+walk_speed = 1.75
+inspect_duration = 2.5
+is_safety = true
+start_target_offset = 4
+
+[node name="Body" type="Node3D" parent="."]
+
+[node name="Chest" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.72, 0, 1.18, 0)
+material_override = SubResource("mat_vest")
+mesh = SubResource("mesh_chest")
+
+[node name="Waist" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.75, 0, 0.94, 0)
+material_override = SubResource("mat_vest")
+mesh = SubResource("mesh_waist")
+
+[node name="ReflectiveStripe" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.76, 0, 0.97, 0)
+material_override = SubResource("mat_stripe")
+mesh = SubResource("mesh_stripe")
+
+[node name="LeftShoulder" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 1.3, 0)
+material_override = SubResource("mat_shirt")
+mesh = SubResource("mesh_shoulder")
+
+[node name="RightShoulder" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.3, 0)
+material_override = SubResource("mat_shirt")
+mesh = SubResource("mesh_shoulder")
+
+[node name="Neck" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.38, 0)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_neck")
+
+[node name="LeftLegPivot" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0.83, 0)
+
+[node name="Thigh" type="MeshInstance3D" parent="Body/LeftLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.19, 0)
+material_override = SubResource("mat_pants")
+mesh = SubResource("mesh_thigh")
+
+[node name="Shin" type="MeshInstance3D" parent="Body/LeftLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.55, 0)
+material_override = SubResource("mat_pants")
+mesh = SubResource("mesh_shin")
+
+[node name="Boot" type="MeshInstance3D" parent="Body/LeftLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, -0.77, 0.04)
+material_override = SubResource("mat_boots")
+mesh = SubResource("mesh_boot")
+
+[node name="RightLegPivot" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.83, 0)
+
+[node name="Thigh" type="MeshInstance3D" parent="Body/RightLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.19, 0)
+material_override = SubResource("mat_pants")
+mesh = SubResource("mesh_thigh")
+
+[node name="Shin" type="MeshInstance3D" parent="Body/RightLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.55, 0)
+material_override = SubResource("mat_pants")
+mesh = SubResource("mesh_shin")
+
+[node name="Boot" type="MeshInstance3D" parent="Body/RightLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, -0.77, 0.04)
+material_override = SubResource("mat_boots")
+mesh = SubResource("mesh_boot")
+
+[node name="LeftArmPivot" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.23, 1.29, 0)
+
+[node name="UpperArm" type="MeshInstance3D" parent="Body/LeftArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+material_override = SubResource("mat_shirt")
+mesh = SubResource("mesh_upper_arm")
+
+[node name="Forearm" type="MeshInstance3D" parent="Body/LeftArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.36, 0.02)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_forearm")
+
+[node name="Hand" type="MeshInstance3D" parent="Body/LeftArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.49, 0.03)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_hand")
+
+[node name="RightArmPivot" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.23, 1.29, 0)
+
+[node name="UpperArm" type="MeshInstance3D" parent="Body/RightArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0)
+material_override = SubResource("mat_shirt")
+mesh = SubResource("mesh_upper_arm")
+
+[node name="Forearm" type="MeshInstance3D" parent="Body/RightArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.36, 0.02)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_forearm")
+
+[node name="Hand" type="MeshInstance3D" parent="Body/RightArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.49, 0.03)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_hand")
+
+[node name="Clipboard" type="MeshInstance3D" parent="Body/RightArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, -0.5, 0.15)
+material_override = SubResource("mat_clipboard")
+mesh = SubResource("mesh_clipboard")
+
+[node name="Paper" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.011, 0.01)
+material_override = SubResource("mat_paper")
+mesh = SubResource("mesh_paper")
+
+[node name="Clip" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, -0.13)
+material_override = SubResource("mat_clip")
+mesh = SubResource("mesh_clip")
+
+[node name="HeaderBar" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.016, -0.075)
+material_override = SubResource("mat_hat")
+mesh = SubResource("mesh_line")
+
+[node name="Line1" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.016, -0.025)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_line")
+
+[node name="Line2" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.016, 0.02)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_line")
+
+[node name="Pen" type="MeshInstance3D" parent="Body/RightArmPivot/Clipboard"]
+transform = Transform3D(0.939693, 0.34202, 0, 0, 0, -1, -0.34202, 0.939693, 0, 0.065, 0.02, 0.04)
+material_override = SubResource("mat_pen")
+mesh = SubResource("mesh_pen")
+
+[node name="HeadPivot" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.52, 0)
+
+[node name="Head" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(0.92, 0, 0, 0, 1.05, 0, 0, 0, 0.98, 0, 0, 0)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_head")
+
+[node name="LeftEar" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(0.6, 0, 0, 0, 1, 0, 0, 0, 0.8, -0.128, 0, 0)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_ear")
+
+[node name="RightEar" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(0.6, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.128, 0, 0)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_ear")
+
+[node name="Nose" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(0.8, 0, 0, 0, 1.1, 0, 0, 0, 1, 0, -0.01, 0.132)
+material_override = SubResource("mat_skin")
+mesh = SubResource("mesh_nose")
+
+[node name="LeftEye" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.045, 0.025, 0.118)
+material_override = SubResource("mat_white")
+mesh = SubResource("mesh_eye_white")
+
+[node name="Pupil" type="MeshInstance3D" parent="Body/HeadPivot/LeftEye"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.012)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_pupil")
+
+[node name="RightEye" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.045, 0.025, 0.118)
+material_override = SubResource("mat_white")
+mesh = SubResource("mesh_eye_white")
+
+[node name="Pupil" type="MeshInstance3D" parent="Body/HeadPivot/RightEye"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.012)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_pupil")
+
+[node name="HardHat" type="MeshInstance3D" parent="Body/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
+material_override = SubResource("mat_hat")
+mesh = SubResource("mesh_hat_dome")
+
+[node name="HatBrim" type="MeshInstance3D" parent="Body/HeadPivot/HardHat"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.045, 0.11)
+material_override = SubResource("mat_hat")
+mesh = SubResource("mesh_hat_brim")
+
+[node name="StatusLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.18, 0)
+billboard = 1
+pixel_size = 0.006
+modulate = Color(0.55, 0.96, 0.67, 1)
+outline_modulate = Color(0.05, 0.08, 0.12, 0.9)
+text = "Safety: Patrol"
+font_size = 26
+outline_size = 6

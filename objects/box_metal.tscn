@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.28, 0.32, 0.37, 1)
+metallic = 0.8
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_steel_rim"]
+albedo_color = Color(0.42, 0.47, 0.54, 1)
+metallic = 0.85
+roughness = 0.28
+
+[sub_resource type="BoxMesh" id="mesh_body"]
+size = Vector3(0.68, 0.42, 0.68)
+
+[sub_resource type="BoxMesh" id="mesh_rim"]
+size = Vector3(0.71, 0.04, 0.71)
+
+[sub_resource type="BoxShape3D" id="shape_crate"]
+size = Vector3(0.68, 0.44, 0.68)
+
+[node name="MetalCrate" type="RigidBody3D"]
+mass = 4.0
+can_sleep = false
+continuous_cd = true
+
+[node name="MetalCrateBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_body")
+
+[node name="TopRim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
+material_override = SubResource("mat_steel_rim")
+mesh = SubResource("mesh_rim")
+
+[node name="BoxCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, 0)
+shape = SubResource("shape_crate")

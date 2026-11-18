@@ -2,8 +2,14 @@
 
 [ext_resource type="PackedScene" path="res://assets/box/box_plastic.glb" id="blender_visual"]
 
-[sub_resource type="BoxShape3D" id="plastic_collision"]
-size = Vector3(0.657, 0.314, 0.899)
+[sub_resource type="BoxShape3D" id="plastic_bottom"]
+size = Vector3(0.657, 0.04, 0.899)
+
+[sub_resource type="BoxShape3D" id="plastic_wall_lr"]
+size = Vector3(0.044, 0.274, 0.899)
+
+[sub_resource type="BoxShape3D" id="plastic_wall_fb"]
+size = Vector3(0.57, 0.274, 0.044)
 
 [sub_resource type="StandardMaterial3D" id="blue_plastic"]
 albedo_color = Color(0.18, 0.45, 0.78, 1)
@@ -20,7 +26,23 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0085, 0, 0)
 material_override = SubResource("blue_plastic")
 
 [node name="PlasticCollision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.157, 0)
-shape = SubResource("plastic_collision")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+shape = SubResource("plastic_bottom")
+
+[node name="LeftWallCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3065, 0.177, 0)
+shape = SubResource("plastic_wall_lr")
+
+[node name="RightWallCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3065, 0.177, 0)
+shape = SubResource("plastic_wall_lr")
+
+[node name="FrontWallCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.177, 0.4275)
+shape = SubResource("plastic_wall_fb")
+
+[node name="BackWallCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.177, -0.4275)
+shape = SubResource("plastic_wall_fb")
 
 [editable path="PlasticVisual"]

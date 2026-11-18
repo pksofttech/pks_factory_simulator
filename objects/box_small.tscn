@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_cardboard"]
+albedo_color = Color(0.76, 0.58, 0.38, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_tape"]
+albedo_color = Color(0.88, 0.78, 0.58, 1)
+roughness = 0.65
+
+[sub_resource type="BoxMesh" id="mesh_box"]
+size = Vector3(0.36, 0.36, 0.36)
+
+[sub_resource type="BoxMesh" id="mesh_tape"]
+size = Vector3(0.055, 0.004, 0.362)
+
+[sub_resource type="BoxShape3D" id="shape_box"]
+size = Vector3(0.36, 0.36, 0.36)
+
+[node name="SmallBox" type="RigidBody3D"]
+can_sleep = false
+continuous_cd = true
+
+[node name="CardboardBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+material_override = SubResource("mat_cardboard")
+mesh = SubResource("mesh_box")
+
+[node name="TapeStrip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.361, 0)
+material_override = SubResource("mat_tape")
+mesh = SubResource("mesh_tape")
+
+[node name="BoxCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+shape = SubResource("shape_box")

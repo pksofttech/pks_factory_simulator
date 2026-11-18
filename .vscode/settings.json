@@ -1,0 +1,9 @@
+{
+  "godotTools.editorPath.godot4": "/home/pksofttech/.local/bin/godot",
+  "godotTools.lsp.headless": true,
+  "godotTools.lsp.serverPort": 6005,
+  "[gdscript]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  }
+}

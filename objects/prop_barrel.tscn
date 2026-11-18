@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_drum"]
+albedo_color = Color(0.12, 0.36, 0.68, 1)
+metallic = 0.55
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="mat_ring"]
+albedo_color = Color(0.22, 0.25, 0.29, 1)
+metallic = 0.8
+roughness = 0.32
+
+[sub_resource type="CylinderMesh" id="mesh_drum"]
+top_radius = 0.31
+bottom_radius = 0.31
+height = 0.92
+radial_segments = 28
+
+[sub_resource type="CylinderMesh" id="mesh_ring"]
+top_radius = 0.325
+bottom_radius = 0.325
+height = 0.035
+radial_segments = 28
+
+[sub_resource type="CylinderShape3D" id="shape_drum"]
+height = 0.92
+radius = 0.32
+
+[node name="SteelDrum" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0)
+shape = SubResource("shape_drum")
+
+[node name="DrumBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0)
+material_override = SubResource("mat_drum")
+mesh = SubResource("mesh_drum")
+
+[node name="RingTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.905, 0)
+material_override = SubResource("mat_ring")
+mesh = SubResource("mesh_ring")
+
+[node name="RingMid1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
+material_override = SubResource("mat_ring")
+mesh = SubResource("mesh_ring")
+
+[node name="RingMid2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.31, 0)
+material_override = SubResource("mat_ring")
+mesh = SubResource("mesh_ring")

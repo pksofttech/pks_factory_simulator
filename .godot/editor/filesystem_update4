@@ -1,0 +1,6 @@
+res://objects/cabinet.tscn
+res://objects/control_cabinet_2d.tscn
+res://objects/cabinet.gd
+res://main.gd
+res://objects/emitter.gd
+res://objects/control_cabinet_2d.gd

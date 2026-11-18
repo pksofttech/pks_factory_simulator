@@ -203,12 +203,20 @@ def build_box_plastic() -> None:
 
     # Outer dimensions match PlasticCollision: Vector3(0.657, 0.314, 0.899), bottom at y = 0.0
     parts = []
-    # Main recessed crate tub
-    parts.append(add_cube("CrateBase", (0.0, 0.145, 0.0), (0.625, 0.285, 0.865), crate_blue, bevel=0.010))
-    # Top reinforced lip rim (y = 0.292)
-    parts.append(add_cube("CrateTopRim", (0.0, 0.294, 0.0), (0.657, 0.036, 0.899), crate_blue, bevel=0.006))
+    # Hollow open-top crate: bottom floor + 4 side walls + 4 top lip rim strips
+    parts.append(add_cube("CrateFloor", (0.0, 0.024, 0.0), (0.625, 0.028, 0.865), crate_blue, bevel=0.004))
+    # 4 hollow side walls (y = 0.025 .. 0.300)
+    parts.append(add_cube("WallLeft", (-0.2985, 0.1625, 0.0), (0.028, 0.275, 0.865), crate_blue, bevel=0.004))
+    parts.append(add_cube("WallRight", (0.2985, 0.1625, 0.0), (0.028, 0.275, 0.865), crate_blue, bevel=0.004))
+    parts.append(add_cube("WallFront", (0.0, 0.1625, 0.4185), (0.570, 0.275, 0.028), crate_blue, bevel=0.004))
+    parts.append(add_cube("WallBack", (0.0, 0.1625, -0.4185), (0.570, 0.275, 0.028), crate_blue, bevel=0.004))
+    # Top reinforced hollow lip rim (y = 0.294)
+    parts.append(add_cube("TopRimLeft", (-0.3065, 0.294, 0.0), (0.044, 0.036, 0.899), crate_blue, bevel=0.004))
+    parts.append(add_cube("TopRimRight", (0.3065, 0.294, 0.0), (0.044, 0.036, 0.899), crate_blue, bevel=0.004))
+    parts.append(add_cube("TopRimFront", (0.0, 0.294, 0.4275), (0.570, 0.036, 0.044), crate_blue, bevel=0.004))
+    parts.append(add_cube("TopRimBack", (0.0, 0.294, -0.4275), (0.570, 0.036, 0.044), crate_blue, bevel=0.004))
     # Bottom stacking runner rim
-    parts.append(add_cube("CrateBottomRim", (0.0, 0.016, 0.0), (0.640, 0.030, 0.880), crate_blue, bevel=0.005))
+    parts.append(add_cube("CrateBottomRim", (0.0, 0.015, 0.0), (0.640, 0.030, 0.880), crate_blue, bevel=0.005))
     # Vertical reinforcing ribs on long sides (X = +-0.320)
     for sx in (-1, 1):
         for rz in (-0.32, -0.16, 0.0, 0.16, 0.32):

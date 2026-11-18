@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_frame"]
+albedo_color = Color(0.18, 0.21, 0.25, 1)
+metallic = 0.65
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="mat_top"]
+albedo_color = Color(0.68, 0.52, 0.34, 1)
+roughness = 0.78
+
+[sub_resource type="BoxMesh" id="mesh_leg"]
+size = Vector3(0.06, 0.86, 0.06)
+
+[sub_resource type="BoxMesh" id="mesh_top"]
+size = Vector3(1.6, 0.06, 0.8)
+
+[sub_resource type="BoxMesh" id="mesh_shelf"]
+size = Vector3(1.5, 0.03, 0.7)
+
+[sub_resource type="BoxShape3D" id="shape_bench"]
+size = Vector3(1.6, 0.92, 0.8)
+
+[node name="Workbench" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0)
+shape = SubResource("shape_bench")
+
+[node name="LegFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.74, 0.43, 0.34)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.74, 0.43, 0.34)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.74, 0.43, -0.34)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.74, 0.43, -0.34)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="TableTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.89, 0)
+material_override = SubResource("mat_top")
+mesh = SubResource("mesh_top")
+
+[node name="LowerShelf" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_shelf")

@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/stack_light.gd" id="stack_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_col"]
+size = Vector3(0.38, 2.25, 0.38)
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.22, 0.27, 0.33, 1)
+metallic = 0.65
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="mat_cap"]
+albedo_color = Color(0.12, 0.15, 0.19, 1)
+metallic = 0.45
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="mat_green"]
+resource_local_to_scene = true
+albedo_color = Color(0.09, 0.26, 0.17, 1)
+roughness = 0.25
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.24, 0.08, 1)
+roughness = 0.25
+
+[sub_resource type="StandardMaterial3D" id="mat_red"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.09, 0.09, 1)
+roughness = 0.25
+
+[sub_resource type="BoxMesh" id="mesh_base"]
+size = Vector3(0.36, 0.08, 0.36)
+
+[sub_resource type="CylinderMesh" id="mesh_post"]
+top_radius = 0.032
+bottom_radius = 0.036
+height = 1.65
+
+[sub_resource type="CylinderMesh" id="mesh_seg"]
+top_radius = 0.075
+bottom_radius = 0.075
+height = 0.15
+
+[sub_resource type="CylinderMesh" id="mesh_cap"]
+top_radius = 0.078
+bottom_radius = 0.078
+height = 0.04
+
+[node name="StackLight" type="StaticBody3D"]
+script = ExtResource("stack_script")
+
+[node name="TowerCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.125, 0)
+shape = SubResource("BoxShape3D_col")
+
+[node name="BasePlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_base")
+
+[node name="Post" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.88, 0)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_post")
+
+[node name="LampGreen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.78, 0)
+material_override = SubResource("mat_green")
+mesh = SubResource("mesh_seg")
+
+[node name="LampYellow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.94, 0)
+material_override = SubResource("mat_yellow")
+mesh = SubResource("mesh_seg")
+
+[node name="LampRed" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
+material_override = SubResource("mat_red")
+mesh = SubResource("mesh_seg")
+
+[node name="TopCap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+material_override = SubResource("mat_cap")
+mesh = SubResource("mesh_cap")

@@ -1,0 +1,93 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/emitter.gd" id="emitter_script"]
+[ext_resource type="PackedScene" path="res://assets/emitter/emitter_visual.glb" id="blender_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_leg"]
+size = Vector3(0.24, 2.26, 0.24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_clear"]
+size = Vector3(0.9, 0.85, 1.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pick_top"]
+size = Vector3(0.92, 0.85, 1.95)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pick_leg"]
+size = Vector3(0.36, 2.26, 0.36)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_led"]
+resource_local_to_scene = true
+albedo_color = Color(0.29, 0.35, 0.4, 1)
+emission_enabled = true
+emission = Color(0.95, 0.16, 0.16, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_led"]
+top_radius = 0.08
+bottom_radius = 0.09
+height = 0.14
+radial_segments = 24
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_beacon_base"]
+top_radius = 0.095
+bottom_radius = 0.105
+height = 0.05
+radial_segments = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_beacon_base"]
+albedo_color = Color(0.14, 0.17, 0.2, 1)
+roughness = 0.45
+metallic = 0.4
+
+[node name="Emitter" type="StaticBody3D"]
+script = ExtResource("emitter_script")
+
+[node name="EmitterVisual" parent="." instance=ExtResource("blender_visual")]
+
+[node name="LegCollisionL" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.13, -0.86)
+shape = SubResource("BoxShape3D_leg")
+
+[node name="LegCollisionR" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.13, 0.86)
+shape = SubResource("BoxShape3D_leg")
+
+[node name="ClearZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+collision_layer = 0
+
+[node name="ClearCollision" type="CollisionShape3D" parent="ClearZone"]
+shape = SubResource("BoxShape3D_clear")
+
+[node name="PickBody" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="PickTop" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+shape = SubResource("BoxShape3D_pick_top")
+
+[node name="PickLegL" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.13, -0.86)
+shape = SubResource("BoxShape3D_pick_leg")
+
+[node name="PickLegR" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.13, 0.86)
+shape = SubResource("BoxShape3D_pick_leg")
+
+[node name="BeaconBase" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.58, 0)
+material_override = SubResource("StandardMaterial3D_beacon_base")
+mesh = SubResource("CylinderMesh_beacon_base")
+
+[node name="Indicator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.67, 0)
+material_override = SubResource("StandardMaterial3D_led")
+mesh = SubResource("CylinderMesh_led")
+
+[node name="BeaconLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+visible = false
+light_color = Color(0.95, 0.2, 0.2, 1)
+light_energy = 1.6
+omni_range = 2.4

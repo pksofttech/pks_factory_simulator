@@ -1,0 +1,620 @@
+[gd_scene format=3 uid="uid://dpxrnpe7byq3j"]
+
+[ext_resource type="Script" uid="uid://dxi2lv4opb7k5" path="res://objects/cabinet.gd" id="cabinet_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.78, 1.9, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nameplate"]
+albedo_color = Color(0.04, 0.045, 0.055, 1)
+metallic = 0.25
+roughness = 0.48
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_faceplate"]
+albedo_color = Color(0.65, 0.68, 0.72, 1)
+metallic = 0.2
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="BoxMesh_faceplate"]
+size = Vector3(0.42, 0.76, 0.006)
+
+[sub_resource type="SphereMesh" id="SphereMesh_lamp_lens"]
+radius = 0.023
+height = 0.026
+radial_segments = 24
+rings = 12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lamp_bezel"]
+albedo_color = Color(0.72, 0.75, 0.79, 1)
+metallic = 0.85
+roughness = 0.25
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_lamp_bezel"]
+top_radius = 0.026
+bottom_radius = 0.029
+height = 0.005
+radial_segments = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fwd_lamp"]
+resource_local_to_scene = true
+albedo_color = Color(0.08, 0.38, 0.22, 1)
+roughness = 0.14
+clearcoat_enabled = true
+clearcoat = 0.8
+emission_enabled = true
+emission = Color(0.1, 0.9, 0.5, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yellow_status_lamp"]
+resource_local_to_scene = true
+albedo_color = Color(0.45, 0.34, 0.05, 1)
+roughness = 0.14
+clearcoat_enabled = true
+clearcoat = 0.8
+emission_enabled = true
+emission = Color(1, 0.78, 0.12, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rev_lamp"]
+resource_local_to_scene = true
+albedo_color = Color(0.42, 0.08, 0.08, 1)
+roughness = 0.14
+clearcoat_enabled = true
+clearcoat = 0.8
+emission_enabled = true
+emission = Color(1, 0.2, 0.2, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_btn_bezel"]
+albedo_color = Color(0.12, 0.14, 0.17, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_btn_bezel"]
+top_radius = 0.03
+bottom_radius = 0.033
+height = 0.006
+radial_segments = 32
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_btn_green"]
+resource_local_to_scene = true
+albedo_color = Color(0.14, 0.62, 0.28, 1)
+roughness = 0.22
+clearcoat_enabled = true
+clearcoat = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cap"]
+top_radius = 0.024
+bottom_radius = 0.026
+height = 0.022
+radial_segments = 32
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_btn"]
+size = Vector3(0.075, 0.075, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_btn_red"]
+resource_local_to_scene = true
+albedo_color = Color(0.86, 0.16, 0.16, 1)
+roughness = 0.22
+clearcoat_enabled = true
+clearcoat = 0.45
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_btn_yellow"]
+resource_local_to_scene = true
+albedo_color = Color(0.95, 0.8, 0.18, 1)
+roughness = 0.22
+clearcoat_enabled = true
+clearcoat = 0.45
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_selector_bezel"]
+albedo_color = Color(0.24, 0.27, 0.31, 1)
+metallic = 0.78
+roughness = 0.28
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_selector_bezel"]
+top_radius = 0.032
+bottom_radius = 0.035
+height = 0.008
+radial_segments = 32
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_knob_base"]
+top_radius = 0.02
+bottom_radius = 0.022
+height = 0.012
+radial_segments = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_knob"]
+albedo_color = Color(0.09, 0.1, 0.12, 1)
+metallic = 0.05
+roughness = 0.42
+
+[sub_resource type="BoxMesh" id="BoxMesh_lever"]
+size = Vector3(0.012, 0.054, 0.024)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pointer"]
+albedo_color = Color(0.96, 0.98, 1, 1)
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.95, 0.97, 1, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="BoxMesh" id="BoxMesh_pointer"]
+size = Vector3(0.004, 0.024, 0.004)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_estop_collar"]
+albedo_color = Color(0.98, 0.82, 0.1, 1)
+roughness = 0.32
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_estop_collar"]
+top_radius = 0.054
+bottom_radius = 0.058
+height = 0.008
+radial_segments = 24
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_estop"]
+top_radius = 0.031
+bottom_radius = 0.025
+height = 0.024
+radial_segments = 32
+
+[sub_resource type="BoxMesh" id="BoxMesh_nameplate"]
+size = Vector3(0.38, 0.042, 0.006)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_enclosure"]
+albedo_color = Color(0.56, 0.6, 0.65, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="BoxMesh" id="BoxMesh_enclosure"]
+size = Vector3(0.78, 1.72, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plinth"]
+albedo_color = Color(0.14, 0.16, 0.19, 1)
+metallic = 0.42
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="BoxMesh_plinth"]
+size = Vector3(0.76, 0.12, 0.48)
+
+[sub_resource type="BoxMesh" id="BoxMesh_top_cap"]
+size = Vector3(0.8, 0.04, 0.52)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gasket"]
+albedo_color = Color(0.08, 0.09, 0.1, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="BoxMesh_door_gasket"]
+size = Vector3(0.72, 1.66, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_door"]
+albedo_color = Color(0.68, 0.72, 0.76, 1)
+metallic = 0.32
+roughness = 0.38
+
+[sub_resource type="BoxMesh" id="BoxMesh_door_panel"]
+size = Vector3(0.7, 1.64, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hinge"]
+albedo_color = Color(0.22, 0.25, 0.29, 1)
+metallic = 0.75
+roughness = 0.32
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_hinge"]
+top_radius = 0.011
+bottom_radius = 0.011
+height = 0.055
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_lock"]
+top_radius = 0.014
+bottom_radius = 0.016
+height = 0.012
+radial_segments = 24
+
+[sub_resource type="BoxMesh" id="BoxMesh_lock_bar"]
+size = Vector3(0.005, 0.018, 0.006)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vent_frame"]
+size = Vector3(0.006, 0.28, 0.22)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vent_slat"]
+size = Vector3(0.008, 0.016, 0.19)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cable_gland"]
+top_radius = 0.014
+bottom_radius = 0.017
+height = 0.024
+radial_segments = 16
+
+[sub_resource type="BoxMesh" id="BoxMesh_warning_badge"]
+size = Vector3(0.046, 0.046, 0.003)
+
+[sub_resource type="BoxMesh" id="BoxMesh_front_grille"]
+size = Vector3(0.38, 0.24, 0.008)
+
+[sub_resource type="BoxMesh" id="BoxMesh_front_slat"]
+size = Vector3(0.34, 0.016, 0.01)
+
+[sub_resource type="BoxMesh" id="BoxMesh_handle_base"]
+size = Vector3(0.028, 0.12, 0.012)
+
+[sub_resource type="BoxMesh" id="BoxMesh_handle_lever"]
+size = Vector3(0.016, 0.085, 0.016)
+
+[sub_resource type="TorusMesh" id="TorusMesh_eyebolt"]
+inner_radius = 0.014
+outer_radius = 0.024
+rings = 16
+ring_segments = 12
+
+[node name="Cabinet" type="StaticBody3D" unique_id=398102948]
+script = ExtResource("cabinet_script")
+
+[node name="BodyCollision" type="CollisionShape3D" parent="." unique_id=539079589]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("BoxShape3D_body")
+
+[node name="CabinetShell" type="Node3D" parent="." unique_id=1498110001]
+
+[node name="Plinth" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+material_override = SubResource("StandardMaterial3D_plinth")
+mesh = SubResource("BoxMesh_plinth")
+
+[node name="EnclosureBody" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_enclosure")
+
+[node name="TopCap" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.86, 0.005)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_top_cap")
+
+[node name="DoorGasket" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0.252)
+material_override = SubResource("StandardMaterial3D_gasket")
+mesh = SubResource("BoxMesh_door_gasket")
+
+[node name="DoorPanel" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110006]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0.261)
+material_override = SubResource("StandardMaterial3D_door")
+mesh = SubResource("BoxMesh_door_panel")
+
+[node name="HingeTop" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110007]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.358, 1.62, 0.262)
+material_override = SubResource("StandardMaterial3D_hinge")
+mesh = SubResource("CylinderMesh_hinge")
+
+[node name="HingeMid" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110023]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.358, 0.98, 0.262)
+material_override = SubResource("StandardMaterial3D_hinge")
+mesh = SubResource("CylinderMesh_hinge")
+
+[node name="HingeBottom" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110008]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.358, 0.34, 0.262)
+material_override = SubResource("StandardMaterial3D_hinge")
+mesh = SubResource("CylinderMesh_hinge")
+
+[node name="DoorHandleBase" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110009]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.305, 0.98, 0.273)
+material_override = SubResource("StandardMaterial3D_plinth")
+mesh = SubResource("BoxMesh_handle_base")
+
+[node name="DoorHandleLever" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110010]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.305, 0.968, 0.281)
+material_override = SubResource("StandardMaterial3D_hinge")
+mesh = SubResource("BoxMesh_handle_lever")
+
+[node name="WarningBadge" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.305, 1.66, 0.272)
+material_override = SubResource("StandardMaterial3D_estop_collar")
+mesh = SubResource("BoxMesh_warning_badge")
+
+[node name="WarningSymbol" type="Label3D" parent="CabinetShell/WarningBadge" unique_id=1498110012]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.003)
+pixel_size = 0.001
+modulate = Color(0.06, 0.06, 0.06, 1)
+text = "⚡"
+font_size = 26
+outline_size = 0
+
+[node name="LowerFilterGrille" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110024]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0.273)
+material_override = SubResource("StandardMaterial3D_plinth")
+mesh = SubResource("BoxMesh_front_grille")
+
+[node name="GrilleSlat1" type="MeshInstance3D" parent="CabinetShell/LowerFilterGrille" unique_id=1498110025]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0.003)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_front_slat")
+
+[node name="GrilleSlat2" type="MeshInstance3D" parent="CabinetShell/LowerFilterGrille" unique_id=1498110026]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0.003)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_front_slat")
+
+[node name="GrilleSlat3" type="MeshInstance3D" parent="CabinetShell/LowerFilterGrille" unique_id=1498110027]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.025, 0.003)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_front_slat")
+
+[node name="GrilleSlat4" type="MeshInstance3D" parent="CabinetShell/LowerFilterGrille" unique_id=1498110028]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.075, 0.003)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_front_slat")
+
+[node name="VentLeft" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110013]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.391, 1.46, 0)
+material_override = SubResource("StandardMaterial3D_plinth")
+mesh = SubResource("BoxMesh_vent_frame")
+
+[node name="Slat1" type="MeshInstance3D" parent="CabinetShell/VentLeft" unique_id=1498110014]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002, 0.07, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="Slat2" type="MeshInstance3D" parent="CabinetShell/VentLeft" unique_id=1498110015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002, 0, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="Slat3" type="MeshInstance3D" parent="CabinetShell/VentLeft" unique_id=1498110016]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002, -0.07, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="VentRight" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110017]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.391, 1.46, 0)
+material_override = SubResource("StandardMaterial3D_plinth")
+mesh = SubResource("BoxMesh_vent_frame")
+
+[node name="Slat1" type="MeshInstance3D" parent="CabinetShell/VentRight" unique_id=1498110018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.002, 0.07, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="Slat2" type="MeshInstance3D" parent="CabinetShell/VentRight" unique_id=1498110019]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.002, 0, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="Slat3" type="MeshInstance3D" parent="CabinetShell/VentRight" unique_id=1498110020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.002, -0.07, 0)
+material_override = SubResource("StandardMaterial3D_enclosure")
+mesh = SubResource("BoxMesh_vent_slat")
+
+[node name="EyeBoltLeft" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110029]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.32, 1.898, 0)
+material_override = SubResource("StandardMaterial3D_lamp_bezel")
+mesh = SubResource("TorusMesh_eyebolt")
+
+[node name="EyeBoltRight" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110030]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.32, 1.898, 0)
+material_override = SubResource("StandardMaterial3D_lamp_bezel")
+mesh = SubResource("TorusMesh_eyebolt")
+
+[node name="CableGland1" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110021]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 1.892, -0.14)
+material_override = SubResource("StandardMaterial3D_gasket")
+mesh = SubResource("CylinderMesh_cable_gland")
+
+[node name="CableGland2" type="MeshInstance3D" parent="CabinetShell" unique_id=1498110022]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 1.892, -0.14)
+material_override = SubResource("StandardMaterial3D_gasket")
+mesh = SubResource("CylinderMesh_cable_gland")
+
+[node name="FrontFaceplate" type="MeshInstance3D" parent="." unique_id=408148079]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.33, 0.273)
+material_override = SubResource("StandardMaterial3D_faceplate")
+mesh = SubResource("BoxMesh_faceplate")
+
+[node name="LampGreenBezel" type="MeshInstance3D" parent="." unique_id=1990547044]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.12, 1.42, 0.278)
+material_override = SubResource("StandardMaterial3D_lamp_bezel")
+mesh = SubResource("CylinderMesh_lamp_bezel")
+
+[node name="LampGreen" type="MeshInstance3D" parent="." unique_id=1990547043]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.12, 1.42, 0.277)
+material_override = SubResource("StandardMaterial3D_fwd_lamp")
+mesh = SubResource("SphereMesh_lamp_lens")
+
+[node name="TagFwdLamp" type="Label3D" parent="." unique_id=347253629]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 1.474, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.05, 0.42, 0.18, 1)
+text = "GREEN"
+font_size = 24
+outline_size = 0
+
+[node name="LampYellowBezel" type="MeshInstance3D" parent="." unique_id=1990547054]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.42, 0.278)
+material_override = SubResource("StandardMaterial3D_lamp_bezel")
+mesh = SubResource("CylinderMesh_lamp_bezel")
+
+[node name="LampYellow" type="MeshInstance3D" parent="." unique_id=1990547053]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.42, 0.277)
+material_override = SubResource("StandardMaterial3D_yellow_status_lamp")
+mesh = SubResource("SphereMesh_lamp_lens")
+
+[node name="TagYellowLamp" type="Label3D" parent="." unique_id=347253630]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.474, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.55, 0.4, 0.04, 1)
+text = "YELLOW"
+font_size = 24
+outline_size = 0
+
+[node name="LampRedBezel" type="MeshInstance3D" parent="." unique_id=1446406248]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.12, 1.42, 0.278)
+material_override = SubResource("StandardMaterial3D_lamp_bezel")
+mesh = SubResource("CylinderMesh_lamp_bezel")
+
+[node name="LampRed" type="MeshInstance3D" parent="." unique_id=1446406247]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.12, 1.42, 0.277)
+material_override = SubResource("StandardMaterial3D_rev_lamp")
+mesh = SubResource("SphereMesh_lamp_lens")
+
+[node name="TagRevLamp" type="Label3D" parent="." unique_id=118436405]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 1.474, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.65, 0.08, 0.08, 1)
+text = "RED"
+font_size = 24
+outline_size = 0
+
+[node name="StartBtnBezel" type="MeshInstance3D" parent="." unique_id=1934548984]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.14, 1.18, 0.278)
+material_override = SubResource("StandardMaterial3D_btn_bezel")
+mesh = SubResource("CylinderMesh_btn_bezel")
+
+[node name="StartBtnMesh" type="MeshInstance3D" parent="." unique_id=1934548983]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.14, 1.18, 0.28)
+material_override = SubResource("StandardMaterial3D_btn_green")
+mesh = SubResource("CylinderMesh_cap")
+
+[node name="TagStartBtn" type="Label3D" parent="." unique_id=1453493997]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.234, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "START"
+font_size = 24
+outline_size = 0
+
+[node name="StartBtnArea" type="Area3D" parent="." unique_id=167460300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.18, 0.282)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="StartBtnArea" unique_id=522697622]
+shape = SubResource("BoxShape3D_btn")
+
+[node name="StopBtnBezel" type="MeshInstance3D" parent="." unique_id=1863919096]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.18, 0.278)
+material_override = SubResource("StandardMaterial3D_btn_bezel")
+mesh = SubResource("CylinderMesh_btn_bezel")
+
+[node name="StopBtnMesh" type="MeshInstance3D" parent="." unique_id=1863919095]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.18, 0.28)
+material_override = SubResource("StandardMaterial3D_btn_red")
+mesh = SubResource("CylinderMesh_cap")
+
+[node name="TagStopBtn" type="Label3D" parent="." unique_id=657310907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.234, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "STOP"
+font_size = 24
+outline_size = 0
+
+[node name="StopBtnArea" type="Area3D" parent="." unique_id=1846322905]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.18, 0.282)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="StopBtnArea" unique_id=2031545984]
+shape = SubResource("BoxShape3D_btn")
+
+[node name="RevBtnBezel" type="MeshInstance3D" parent="." unique_id=1843984784]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.14, 1.18, 0.278)
+material_override = SubResource("StandardMaterial3D_btn_bezel")
+mesh = SubResource("CylinderMesh_btn_bezel")
+
+[node name="RevBtnMesh" type="MeshInstance3D" parent="." unique_id=1843984783]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.14, 1.18, 0.28)
+material_override = SubResource("StandardMaterial3D_btn_yellow")
+mesh = SubResource("CylinderMesh_cap")
+
+[node name="TagRevBtn" type="Label3D" parent="." unique_id=307025378]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 1.234, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "BTN01"
+font_size = 24
+outline_size = 0
+
+[node name="RevBtnArea" type="Area3D" parent="." unique_id=1600845908]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 1.18, 0.282)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="RevBtnArea" unique_id=62735033]
+shape = SubResource("BoxShape3D_btn")
+
+[node name="SelectorBezel" type="MeshInstance3D" parent="." unique_id=171353325]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.1, 1.01, 0.277)
+material_override = SubResource("StandardMaterial3D_selector_bezel")
+mesh = SubResource("CylinderMesh_selector_bezel")
+
+[node name="SelectorKnob" type="Node3D" parent="." unique_id=171353324]
+transform = Transform3D(0.819152, 0.573576, 0, -0.573576, 0.819152, 0, 0, 0, 1, -0.1, 1.01, 0.282)
+
+[node name="KnobBase" type="MeshInstance3D" parent="SelectorKnob" unique_id=171353326]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_knob")
+mesh = SubResource("CylinderMesh_knob_base")
+
+[node name="Lever" type="MeshInstance3D" parent="SelectorKnob" unique_id=1800558433]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.006)
+material_override = SubResource("StandardMaterial3D_knob")
+mesh = SubResource("BoxMesh_lever")
+
+[node name="Pointer" type="MeshInstance3D" parent="SelectorKnob" unique_id=1052744607]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.013, 0.018)
+material_override = SubResource("StandardMaterial3D_pointer")
+mesh = SubResource("BoxMesh_pointer")
+
+[node name="TagOffOn" type="Label3D" parent="." unique_id=2126559962]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.064, 0.279)
+pixel_size = 0.00105
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "MAN  AUTO"
+font_size = 22
+outline_size = 0
+
+[node name="SelectorArea" type="Area3D" parent="." unique_id=672834754]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.01, 0.282)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="SelectorArea" unique_id=1855857944]
+shape = SubResource("BoxShape3D_btn")
+
+[node name="EStopCollar" type="MeshInstance3D" parent="." unique_id=425831672]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.1, 1.01, 0.275)
+material_override = SubResource("StandardMaterial3D_estop_collar")
+mesh = SubResource("CylinderMesh_estop_collar")
+
+[node name="EStopMesh" type="MeshInstance3D" parent="." unique_id=1044325635]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0.1, 1.01, 0.288)
+material_override = SubResource("StandardMaterial3D_btn_red")
+mesh = SubResource("CylinderMesh_estop")
+
+[node name="Nameplate" type="MeshInstance3D" parent="." unique_id=98476925]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.715, 0.274)
+material_override = SubResource("StandardMaterial3D_nameplate")
+mesh = SubResource("BoxMesh_nameplate")
+
+[node name="NameplateText" type="Label3D" parent="Nameplate" unique_id=1122466068]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.005)
+pixel_size = 0.00095
+modulate = Color(0.96, 0.98, 1, 1)
+text = "MAIN CONTROL"
+font_size = 24
+outline_size = 0
+
+[node name="TagEStop" type="Label3D" parent="." unique_id=2036042414]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.074, 0.279)
+pixel_size = 0.00115
+modulate = Color(0.72, 0.08, 0.08, 1)
+text = "E-STOP"
+font_size = 24
+outline_size = 0
+
+[node name="EStopArea" type="Area3D" parent="." unique_id=2103809919]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.01, 0.287)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="EStopArea" unique_id=1945015457]
+shape = SubResource("BoxShape3D_btn")

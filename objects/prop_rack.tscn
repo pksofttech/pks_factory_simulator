@@ -1,0 +1,108 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_upright"]
+albedo_color = Color(0.12, 0.3, 0.62, 1)
+metallic = 0.55
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="mat_beam"]
+albedo_color = Color(0.92, 0.42, 0.08, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="mat_deck"]
+albedo_color = Color(0.62, 0.48, 0.3, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="mesh_post"]
+size = Vector3(0.08, 2.4, 0.08)
+
+[sub_resource type="BoxMesh" id="mesh_beam"]
+size = Vector3(1.96, 0.09, 0.06)
+
+[sub_resource type="BoxMesh" id="mesh_brace"]
+size = Vector3(0.06, 0.06, 0.96)
+
+[sub_resource type="BoxMesh" id="mesh_deck"]
+size = Vector3(1.88, 0.03, 0.92)
+
+[sub_resource type="BoxShape3D" id="shape_rack"]
+size = Vector3(2.0, 2.4, 1.0)
+
+[node name="PalletRack" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("shape_rack")
+
+[node name="PostFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.94, 1.2, 0.44)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_post")
+
+[node name="PostFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.94, 1.2, 0.44)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_post")
+
+[node name="PostBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.94, 1.2, -0.44)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_post")
+
+[node name="PostBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.94, 1.2, -0.44)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_post")
+
+[node name="BraceL1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.94, 1.0, 0)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_brace")
+
+[node name="BraceR1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.94, 1.0, 0)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_brace")
+
+[node name="BraceL2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.94, 2.0, 0)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_brace")
+
+[node name="BraceR2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.94, 2.0, 0)
+material_override = SubResource("mat_upright")
+mesh = SubResource("mesh_brace")
+
+[node name="BeamF1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.44)
+material_override = SubResource("mat_beam")
+mesh = SubResource("mesh_beam")
+
+[node name="BeamB1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, -0.44)
+material_override = SubResource("mat_beam")
+mesh = SubResource("mesh_beam")
+
+[node name="BeamF2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0.44)
+material_override = SubResource("mat_beam")
+mesh = SubResource("mesh_beam")
+
+[node name="BeamB2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, -0.44)
+material_override = SubResource("mat_beam")
+mesh = SubResource("mesh_beam")
+
+[node name="Deck1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+material_override = SubResource("mat_deck")
+mesh = SubResource("mesh_deck")
+
+[node name="Deck2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0)
+material_override = SubResource("mat_deck")
+mesh = SubResource("mesh_deck")

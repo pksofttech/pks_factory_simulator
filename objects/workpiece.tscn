@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_aluminum"]
+albedo_color = Color(0.76, 0.79, 0.84, 1)
+metallic = 0.88
+roughness = 0.22
+
+[sub_resource type="StandardMaterial3D" id="mat_brass"]
+albedo_color = Color(0.84, 0.66, 0.26, 1)
+metallic = 0.85
+roughness = 0.25
+
+[sub_resource type="CylinderMesh" id="mesh_flange"]
+top_radius = 0.17
+bottom_radius = 0.17
+height = 0.08
+radial_segments = 32
+
+[sub_resource type="CylinderMesh" id="mesh_boss"]
+top_radius = 0.1
+bottom_radius = 0.11
+height = 0.14
+radial_segments = 32
+
+[sub_resource type="CylinderShape3D" id="shape_workpiece"]
+height = 0.22
+radius = 0.17
+
+[node name="Workpiece" type="RigidBody3D"]
+mass = 2.0
+can_sleep = false
+continuous_cd = true
+
+[node name="BaseFlange" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+material_override = SubResource("mat_aluminum")
+mesh = SubResource("mesh_flange")
+
+[node name="BossHub" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+material_override = SubResource("mat_brass")
+mesh = SubResource("mesh_boss")
+
+[node name="WorkpieceCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
+shape = SubResource("shape_workpiece")

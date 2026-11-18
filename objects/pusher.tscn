@@ -6,6 +6,9 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_stand"]
 size = Vector3(0.62, 1.35, 0.62)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_paddle"]
+size = Vector3(0.54, 0.22, 1.08)
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_trigger"]
 size = Vector3(0.55, 0.8, 0.7)
 
@@ -27,6 +30,10 @@ script = ExtResource("pusher_script")
 [node name="StandCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.675, -0.1)
 shape = SubResource("BoxShape3D_stand")
+
+[node name="PaddleCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.26, -0.04)
+shape = SubResource("BoxShape3D_paddle")
 
 [node name="TriggerZone" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 1.05)

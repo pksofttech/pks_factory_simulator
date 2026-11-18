@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/cabinet_modules/cabinet_button.gd" id="1_btn_gd"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bezel"]
+albedo_color = Color(0.12, 0.14, 0.17, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bezel"]
+top_radius = 0.03
+bottom_radius = 0.033
+height = 0.006
+radial_segments = 32
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cap"]
+resource_local_to_scene = true
+albedo_color = Color(0.14, 0.62, 0.28, 1)
+roughness = 0.22
+clearcoat_enabled = true
+clearcoat = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cap"]
+top_radius = 0.024
+bottom_radius = 0.026
+height = 0.022
+radial_segments = 32
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_area"]
+size = Vector3(0.075, 0.075, 0.05)
+
+[node name="CabinetButton" type="Node3D"]
+script = ExtResource("1_btn_gd")
+
+[node name="Bezel" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0.002)
+material_override = SubResource("StandardMaterial3D_bezel")
+mesh = SubResource("CylinderMesh_bezel")
+
+[node name="Cap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0.004)
+material_override = SubResource("StandardMaterial3D_cap")
+mesh = SubResource("CylinderMesh_cap")
+
+[node name="Tag" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.054, 0.003)
+pixel_size = 0.00115
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "BTN"
+font_size = 24
+outline_size = 0
+
+[node name="Area" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.006)
+collision_layer = 2
+collision_mask = 0
+
+[node name="Col" type="CollisionShape3D" parent="Area"]
+shape = SubResource("BoxShape3D_area")

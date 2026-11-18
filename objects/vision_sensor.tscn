@@ -1,0 +1,136 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/vision_sensor.gd" id="vision_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_zone"]
+size = Vector3(0.42, 0.55, 0.95)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pick_post"]
+size = Vector3(0.28, 2.1, 0.28)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pick_head"]
+size = Vector3(0.32, 0.35, 1.05)
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.24, 0.29, 0.35, 1)
+metallic = 0.65
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="mat_cam_body"]
+albedo_color = Color(0.12, 0.16, 0.22, 1)
+metallic = 0.35
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="mat_lens"]
+albedo_color = Color(0.08, 0.32, 0.55, 1)
+metallic = 0.8
+roughness = 0.15
+
+[sub_resource type="StandardMaterial3D" id="mat_led"]
+resource_local_to_scene = true
+albedo_color = Color(0.16, 0.78, 1, 1)
+emission_enabled = true
+emission = Color(0.16, 0.78, 1, 1)
+emission_energy_multiplier = 0.9
+
+[sub_resource type="StandardMaterial3D" id="mat_beam"]
+resource_local_to_scene = true
+transparency = 1
+albedo_color = Color(0.15, 0.78, 1, 0.16)
+emission_enabled = true
+emission = Color(0.15, 0.78, 1, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="BoxMesh" id="mesh_base"]
+size = Vector3(0.28, 0.06, 0.28)
+
+[sub_resource type="CylinderMesh" id="mesh_post"]
+top_radius = 0.045
+bottom_radius = 0.05
+height = 2.05
+
+[sub_resource type="BoxMesh" id="mesh_arm"]
+size = Vector3(0.08, 0.08, 0.95)
+
+[sub_resource type="BoxMesh" id="mesh_cam"]
+size = Vector3(0.22, 0.16, 0.24)
+
+[sub_resource type="CylinderMesh" id="mesh_lens"]
+top_radius = 0.065
+bottom_radius = 0.055
+height = 0.08
+
+[sub_resource type="CylinderMesh" id="mesh_led"]
+top_radius = 0.04
+bottom_radius = 0.045
+height = 0.05
+
+[sub_resource type="CylinderMesh" id="mesh_beam"]
+top_radius = 0.08
+bottom_radius = 0.26
+height = 0.82
+
+[node name="VisionSensor" type="Area3D"]
+collision_layer = 2
+script = ExtResource("vision_script")
+
+[node name="PickBody" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="PostCol" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.92)
+shape = SubResource("BoxShape3D_pick_post")
+
+[node name="HeadCol" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.94, 0.45)
+shape = SubResource("BoxShape3D_pick_head")
+
+[node name="DetectZone" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0)
+shape = SubResource("BoxShape3D_zone")
+
+[node name="BasePlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0.92)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_base")
+
+[node name="Post" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.92)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_post")
+
+[node name="BoomArm" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04, 0.48)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_arm")
+
+[node name="CameraBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.94, 0)
+material_override = SubResource("mat_cam_body")
+mesh = SubResource("mesh_cam")
+
+[node name="Lens" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.84, 0)
+material_override = SubResource("mat_lens")
+mesh = SubResource("mesh_lens")
+
+[node name="Indicator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0)
+material_override = SubResource("mat_led")
+mesh = SubResource("mesh_led")
+
+[node name="ScanBeam" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.42, 0)
+material_override = SubResource("mat_beam")
+mesh = SubResource("mesh_beam")
+
+[node name="ModeLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.22, 0)
+billboard = 1
+pixel_size = 0.0045
+modulate = Color(0.55, 0.92, 1, 1)
+outline_modulate = Color(0.05, 0.08, 0.12, 0.9)
+text = "VISION: ALL"
+font_size = 24
+outline_size = 5

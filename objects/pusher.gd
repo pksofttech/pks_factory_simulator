@@ -15,24 +15,32 @@ var is_extended := false
 var is_retracted := true
 var paddle: Node3D
 var paddle_base_z := 0.0
+var paddle_col_base_z := 0.0
 
 @onready var trigger_zone: Area3D = $TriggerZone
+@onready var paddle_col: CollisionShape3D = get_node_or_null("PaddleCollision")
 
 func _ready() -> void:
 	paddle = find_child("PusherPaddle", true, false) as Node3D
 	if paddle != null:
 		paddle_base_z = paddle.position.z
+	if paddle_col != null:
+		paddle_col_base_z = paddle_col.position.z
 
 func _physics_process(delta: float) -> void:
 	var scene := get_parent()
-	var is_running: bool = scene != null and bool(scene.get("running"))
+	var is_running: bool = scene != null and scene.get("running") != null and bool(scene.get("running"))
 
 	if plc_mode:
 		if is_running and active:
+			if state != State.EXTENDING:
+				var fa := get_node_or_null("/root/FactoryAudio")
+				if fa != null:
+					fa.call("play_one_shot", self, "pneumatic", -9.0, 14.0)
 			state = State.EXTENDING
 			if extension < stroke_length:
 				extension = minf(extension + push_speed * delta, stroke_length)
-			_push_overlapping_boxes()
+				_push_overlapping_boxes()
 		else:
 			state = State.RETRACTING if extension > 0.0 else State.IDLE
 			extension = maxf(extension - retract_speed * delta, 0.0)
@@ -41,6 +49,9 @@ func _physics_process(delta: float) -> void:
 			State.IDLE:
 				if is_running and _has_target_box():
 					state = State.EXTENDING
+					var fa := get_node_or_null("/root/FactoryAudio")
+					if fa != null:
+						fa.call("play_one_shot", self, "pneumatic", -9.0, 14.0)
 			State.EXTENDING:
 				if extension < stroke_length:
 					extension = minf(extension + push_speed * delta, stroke_length)
@@ -60,6 +71,8 @@ func _physics_process(delta: float) -> void:
 	is_retracted = extension <= 0.01
 	if paddle != null:
 		paddle.position.z = paddle_base_z + extension
+	if paddle_col != null:
+		paddle_col.position.z = paddle_col_base_z + extension
 
 func _has_target_box() -> bool:
 	for body in trigger_zone.get_overlapping_bodies():

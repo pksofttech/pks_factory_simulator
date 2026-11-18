@@ -1,0 +1,203 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/remover.gd" id="remover_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_zone"]
+size = Vector3(1.3, 0.1, 1.48)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pick"]
+size = Vector3(1.54, 1.3, 1.72)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_fb"]
+size = Vector3(0.08, 0.78, 1.68)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_lr"]
+size = Vector3(1.5, 0.78, 0.08)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(1.5, 0.08, 1.68)
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.18, 0.23, 0.28, 1)
+metallic = 0.45
+roughness = 0.48
+
+[sub_resource type="StandardMaterial3D" id="mat_inner"]
+albedo_color = Color(0.1, 0.12, 0.15, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_amber"]
+albedo_color = Color(0.92, 0.62, 0.12, 1)
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.32, 0.38, 0.44, 1)
+metallic = 0.65
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_led"]
+resource_local_to_scene = true
+albedo_color = Color(1, 0.48, 0.18, 1)
+emission_enabled = true
+emission = Color(1, 0.48, 0.18, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="StandardMaterial3D" id="mat_zone"]
+transparency = 1
+albedo_color = Color(1, 0.48, 0.18, 0.18)
+emission_enabled = true
+emission = Color(1, 0.48, 0.18, 1)
+emission_energy_multiplier = 0.55
+
+[sub_resource type="BoxMesh" id="mesh_floor"]
+size = Vector3(1.5, 0.06, 1.66)
+
+[sub_resource type="BoxMesh" id="mesh_wall_back"]
+size = Vector3(0.06, 0.78, 1.68)
+
+[sub_resource type="BoxMesh" id="mesh_wall_front"]
+size = Vector3(0.06, 0.28, 1.68)
+
+[sub_resource type="BoxMesh" id="mesh_wall_side"]
+size = Vector3(1.5, 0.78, 0.06)
+
+[sub_resource type="BoxMesh" id="mesh_leg"]
+size = Vector3(0.1, 0.36, 0.1)
+
+[sub_resource type="BoxMesh" id="mesh_rim_back"]
+size = Vector3(0.08, 0.04, 1.7)
+
+[sub_resource type="BoxMesh" id="mesh_rim_side"]
+size = Vector3(1.52, 0.04, 0.08)
+
+[sub_resource type="CylinderMesh" id="mesh_post"]
+top_radius = 0.028
+bottom_radius = 0.032
+height = 0.42
+
+[sub_resource type="CylinderMesh" id="mesh_led"]
+top_radius = 0.055
+bottom_radius = 0.06
+height = 0.1
+
+[sub_resource type="BoxMesh" id="mesh_zone"]
+size = Vector3(1.3, 0.04, 1.48)
+
+[node name="Remover" type="Area3D"]
+collision_layer = 2
+script = ExtResource("remover_script")
+
+[node name="RemoveZone" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("BoxShape3D_zone")
+
+[node name="PickBody" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="PickBox" type="CollisionShape3D" parent="PickBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+shape = SubResource("BoxShape3D_pick")
+
+[node name="BinBody" type="StaticBody3D" parent="."]
+
+[node name="FloorCol" type="CollisionShape3D" parent="BinBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
+shape = SubResource("BoxShape3D_floor")
+
+[node name="BackCol" type="CollisionShape3D" parent="BinBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 0.77, 0)
+shape = SubResource("BoxShape3D_wall_fb")
+
+[node name="LeftCol" type="CollisionShape3D" parent="BinBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.77, -0.81)
+shape = SubResource("BoxShape3D_wall_lr")
+
+[node name="RightCol" type="CollisionShape3D" parent="BinBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.77, 0.81)
+shape = SubResource("BoxShape3D_wall_lr")
+
+[node name="BinFloor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
+material_override = SubResource("mat_inner")
+mesh = SubResource("mesh_floor")
+
+[node name="ZoneGlow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43, 0)
+material_override = SubResource("mat_zone")
+mesh = SubResource("mesh_zone")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 0.77, 0)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_wall_back")
+
+[node name="FrontLip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72, 0.52, 0)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_wall_front")
+
+[node name="LeftWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.77, -0.81)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_wall_side")
+
+[node name="RightWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.77, 0.81)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_wall_side")
+
+[node name="BackRim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 1.18, 0)
+material_override = SubResource("mat_amber")
+mesh = SubResource("mesh_rim_back")
+
+[node name="LeftRim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.18, -0.81)
+material_override = SubResource("mat_amber")
+mesh = SubResource("mesh_rim_side")
+
+[node name="RightRim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.18, 0.81)
+material_override = SubResource("mat_amber")
+mesh = SubResource("mesh_rim_side")
+
+[node name="LegFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.66, 0.18, -0.74)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_leg")
+
+[node name="LegFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.66, 0.18, 0.74)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.66, 0.18, -0.74)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.66, 0.18, 0.74)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_leg")
+
+[node name="BeaconPost" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 1.38, 0.81)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_post")
+
+[node name="Indicator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 1.63, 0.81)
+material_override = SubResource("mat_led")
+mesh = SubResource("mesh_led")
+
+[node name="CountLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+billboard = 1
+pixel_size = 0.0045
+modulate = Color(1, 0.72, 0.45, 1)
+outline_modulate = Color(0.05, 0.08, 0.12, 0.9)
+text = "REMOVER: 0"
+font_size = 24
+outline_size = 5

@@ -1,0 +1,68 @@
+[gd_scene format=3 uid="uid://boblgqie0bqjn"]
+
+[ext_resource type="Script" uid="uid://dvpmgw7jy8o14" path="res://objects/control_cabinet_2d.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dpxrnpe7byq3j" path="res://objects/cabinet.tscn" id="2_cabinet3d"]
+
+[sub_resource type="Environment" id="Environment_studio"]
+ambient_light_source = 2
+ambient_light_color = Color(0.85, 0.9, 0.96, 1)
+ambient_light_energy = 0.55
+
+[sub_resource type="World3D" id="World3D_cabinet"]
+environment = SubResource("Environment_studio")
+
+[node name="ControlCabinetLayer" type="CanvasLayer" unique_id=431295509]
+script = ExtResource("1_script")
+
+[node name="CabinetPanel" type="PanelContainer" parent="." unique_id=1924915937]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 110.0
+offset_right = -16.0
+offset_bottom = 482.0
+grow_horizontal = 0
+
+[node name="Margin" type="MarginContainer" parent="CabinetPanel" unique_id=1931037117]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="CabinetPanel/Margin" unique_id=634146546]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="ViewportContainer" type="SubViewportContainer" parent="CabinetPanel/Margin/VBox" unique_id=856548470]
+custom_minimum_size = Vector2(212, 360)
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="CabinetViewport" type="SubViewport" parent="CabinetPanel/Margin/VBox/ViewportContainer" unique_id=1701214094]
+own_world_3d = true
+world_3d = SubResource("World3D_cabinet")
+transparent_bg = true
+handle_input_locally = false
+msaa_3d = 2
+physics_object_picking = true
+size = Vector2i(212, 360)
+render_target_update_mode = 4
+
+[node name="StudioLight" type="DirectionalLight3D" parent="CabinetPanel/Margin/VBox/ViewportContainer/CabinetViewport" unique_id=1979824137]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0.6, 1.4, 2)
+light_energy = 1.15
+
+[node name="FillLight" type="DirectionalLight3D" parent="CabinetPanel/Margin/VBox/ViewportContainer/CabinetViewport" unique_id=117328922]
+transform = Transform3D(0.866025, 0.17101, -0.469846, 0, 0.939693, 0.34202, 0.5, -0.296198, 0.813798, -0.8, 0.8, 1.5)
+light_color = Color(0.85, 0.92, 1, 1)
+light_energy = 0.25
+
+[node name="CabinetCamera" type="Camera3D" parent="CabinetPanel/Margin/VBox/ViewportContainer/CabinetViewport" unique_id=1253272206]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.34, 1.52)
+current = true
+fov = 38.0
+
+[node name="Cabinet3D" parent="CabinetPanel/Margin/VBox/ViewportContainer/CabinetViewport" unique_id=1131371053 instance=ExtResource("2_cabinet3d")]

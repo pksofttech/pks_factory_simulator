@@ -43,6 +43,9 @@ func _physics_process(delta: float) -> void:
 			gate_state = next_state
 			if gate_state == GateState.OPEN:
 				_wake_queued_boxes()
+			var fa := get_node_or_null("/root/FactoryAudio")
+			if fa != null:
+				fa.call("play_one_shot", self, "pneumatic", -11.0, 14.0)
 			_update_indicator()
 	elif is_running:
 		match gate_state:
