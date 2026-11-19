@@ -6381,7 +6381,7 @@ func _apply_conveyor_speed(belt: StaticBody3D) -> void:
 			belt.call("_update_velocity")
 	else:
 		belt.constant_linear_velocity = belt.global_basis.x.normalized() * (
-			target_speed if running else 0.0
+			target_speed if (running and (plc_mode or test_mode)) else 0.0
 		)
 
 
@@ -6396,6 +6396,16 @@ func _apply_plc_mode(enabled: bool, save_cfg: bool = true) -> void:
 		var kind := str(obj.get_meta("kind", ""))
 		if kind in ["pusher", "stopper", "emitter", "remover", "cabinet", "stack_light", "motor_fan", "pump", "water_tank", "solenoid_valve", "reject_bin"]:
 			obj.set("plc_mode", plc_mode)
+			if not plc_mode and kind != "cabinet":
+				if obj.has_meta("forced_active"):
+					obj.set("active", bool(obj.get_meta("forced_active")))
+				else:
+					if kind == "stack_light":
+						obj.set("lamp_green_on", false)
+						obj.set("lamp_yellow_on", false)
+						obj.set("lamp_red_on", false)
+					else:
+						obj.set("active", false)
 		elif kind == "turn":
 			var area := obj.get_node_or_null("TransferArea")
 			if area != null:
@@ -6660,6 +6670,16 @@ func _clear_all_forces() -> void:
 		var kind := str(obj.get_meta("kind", ""))
 		if kind in ["pusher", "stopper", "emitter", "remover", "cabinet", "stack_light", "motor_fan", "pump", "water_tank", "solenoid_valve", "reject_bin"]:
 			obj.set("plc_mode", plc_mode)
+			if not plc_mode and kind != "cabinet":
+				if obj.has_meta("forced_active"):
+					obj.set("active", bool(obj.get_meta("forced_active")))
+				else:
+					if kind == "stack_light":
+						obj.set("lamp_green_on", false)
+						obj.set("lamp_yellow_on", false)
+						obj.set("lamp_red_on", false)
+					else:
+						obj.set("active", false)
 			obj.set("active", false)
 			if kind == "cabinet" and obj.has_method("clear_all_item_forces"):
 				obj.call("clear_all_item_forces")

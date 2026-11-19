@@ -6,12 +6,37 @@
   },
   "objects": [
     {
+      "base_id": "base_conveyor",
+      "height_offset": 0.0,
+      "kind": "conveyor",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "MainConveyor",
+      "reversed": false,
+      "rotation": 0.0,
+      "speed": 1.8,
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "base_sensor",
+      "height_offset": 0.0,
+      "kind": "sensor",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "EntrySensor",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 2.0,
+      "z": 0.0
+    },
+    {
       "base_id": "",
       "height_offset": 0.0,
       "kind": "conveyor",
       "modbus_coil": 0,
       "modbus_input": -1,
-      "name": "MainConveyor",
+      "name": "MainConveyor2",
       "reversed": false,
       "rotation": 0.0,
       "speed": 1.8,
@@ -37,7 +62,7 @@
       "kind": "sensor",
       "modbus_coil": -1,
       "modbus_input": 0,
-      "name": "EntrySensor",
+      "name": "EntrySensor2",
       "reversed": false,
       "rotation": 0.0,
       "x": -1.5,
@@ -68,7 +93,7 @@
       "reversed": false,
       "rotation": 0.0,
       "x": 1.5,
-      "z": -1.2
+      "z": -1.20000004768372
     },
     {
       "base_id": "",
@@ -78,9 +103,9 @@
       "modbus_input": -1,
       "name": "RejectBin",
       "reversed": false,
-      "rotation": 0.0,
-      "x": 1.5,
-      "z": 1.25
+      "rotation": 180.0,
+      "x": 3.0,
+      "z": 3.5
     },
     {
       "base_id": "",
@@ -91,7 +116,7 @@
       "name": "BoxRemover",
       "reversed": false,
       "rotation": 0.0,
-      "x": 4.0,
+      "x": 5.25,
       "z": 0.0
     },
     {
@@ -103,8 +128,8 @@
       "name": "StackLight",
       "reversed": false,
       "rotation": 0.0,
-      "x": -4.2,
-      "z": -1.4
+      "x": -4.19999980926514,
+      "z": -1.39999997615814
     },
     {
       "base_id": "",
@@ -116,7 +141,7 @@
       "reversed": false,
       "rotation": 0.0,
       "x": 0.5,
-      "z": -3.2
+      "z": -3.20000004768372
     },
     {
       "base_id": "",
@@ -127,8 +152,8 @@
       "name": "PalletStack",
       "reversed": false,
       "rotation": 0.0,
-      "x": 4.2,
-      "z": 2.4
+      "x": 6.0,
+      "z": 3.5
     },
     {
       "base_id": "",
@@ -139,8 +164,8 @@
       "name": "Forklift",
       "reversed": false,
       "rotation": 90.0,
-      "x": 6.5,
-      "z": 2.4
+      "x": 5.0,
+      "z": -6.5
     },
     {
       "base_id": "",
@@ -152,7 +177,7 @@
       "reversed": false,
       "rotation": 0.0,
       "x": -2.0,
-      "z": 2.2
+      "z": 2.20000004768372
     },
     {
       "base_id": "",
@@ -163,14 +188,39 @@
       "name": "SafetyBollard",
       "reversed": false,
       "rotation": 0.0,
-      "x": 4.8,
-      "z": -1.2
+      "x": 4.80000019073486,
+      "z": -1.20000004768372
     }
   ],
   "plc": {
+    "address_profile": 0,
+    "bind_address": "0.0.0.0",
+    "cabinet_coil_addr": -1,
+    "cabinet_input_addr": -1,
+    "cabinet_io_addrs": {
+      "Btn01": -1,
+      "BtnStart": -1,
+      "BtnStop": -1,
+      "LampGreen": -1,
+      "LampRed": -1,
+      "SwitchAuto": -1,
+      "SwitchEStop": -1
+    },
+    "client_packed_di": true,
+    "client_unit_id": 1,
+    "fx_coil_offset": 0,
+    "fx_di_offset": 0,
+    "fx_hr_offset": 0,
+    "fx_ir_offset": 0,
     "modbus_enabled": false,
+    "modbus_mode": 0,
     "plc_mode": true,
-    "plc_notation": "mitsubishi"
+    "plc_notation": "iec",
+    "poll_interval": 0.015,
+    "port": 1502,
+    "remote_host": "127.0.0.1",
+    "remote_port": 502,
+    "unit_id_filter": 0
   },
   "project_version": 1,
   "ui": {
