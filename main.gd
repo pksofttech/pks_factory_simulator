@@ -2049,7 +2049,7 @@ func _refresh_cabinet_slot_grid() -> void:
 			elif dyn_map.has(key):
 				var mod: Dictionary = dyn_map[key]
 				var mkind := str(mod.get("kind", ""))
-				var icon := "■" if mkind in ["push_button", "button"] else ("◈" if mkind == "switch_select" else ("❖" if mkind == "switch_3pos" else ("◎" if mkind == "potentiometer" else ("▥" if mkind == "dpm" else "●"))))
+				var icon := "[B]" if mkind in ["push_button", "button"] else ("[S]" if mkind == "switch_select" else ("[3]" if mkind == "switch_3pos" else ("[P]" if mkind == "potentiometer" else ("[M]" if mkind == "dpm" else "[L]"))))
 				var lbl := str(mod.get("label", "MOD")).substr(0, 5)
 				btn.text = ("[%s %s]" % [icon, lbl]) if is_sel else ("%s %s" % [icon, lbl])
 				btn.disabled = false
@@ -2375,7 +2375,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 	if bool(cab.get("show_builtin_items")):
 		items.append({
 			"key": "start",
-			"label": "■ " + str(cab.get("btn_start_label")),
+			"label": "[B] " + str(cab.get("btn_start_label")),
 			"dir": "input",
 			"addr": i_addr + 0 if i_addr >= 0 else -1,
 			"active": bool(cab.get("start_pressed")),
@@ -2383,7 +2383,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		})
 		items.append({
 			"key": "stop",
-			"label": "■ " + str(cab.get("btn_stop_label")),
+			"label": "[B] " + str(cab.get("btn_stop_label")),
 			"dir": "input",
 			"addr": i_addr + 1 if i_addr >= 0 else -1,
 			"active": bool(cab.get("stop_pressed")),
@@ -2392,7 +2392,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		if bool(cab.get("show_rev_btn")):
 			items.append({
 				"key": "rev",
-				"label": "■ " + str(cab.get("btn01_label")),
+				"label": "[B] " + str(cab.get("btn01_label")),
 				"dir": "input",
 				"addr": - 1,
 				"active": bool(cab.get("reverse_pressed")),
@@ -2400,7 +2400,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 			})
 		items.append({
 			"key": "auto",
-			"label": "◈ " + str(cab.get("switch_auto_label")),
+			"label": "[S] " + str(cab.get("switch_auto_label")),
 			"dir": "input",
 			"addr": - 1,
 			"active": bool(cab.get("selector_auto")),
@@ -2408,7 +2408,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		})
 		items.append({
 			"key": "estop",
-			"label": "◈ " + str(cab.get("switch_estop_label")),
+			"label": "[S] " + str(cab.get("switch_estop_label")),
 			"dir": "input",
 			"addr": i_addr + 2 if i_addr >= 0 else -1,
 			"active": bool(cab.get("estop_active")),
@@ -2417,7 +2417,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		var g_forced := forced_map.has("lamp_g")
 		items.append({
 			"key": "lamp_g",
-			"label": "● " + str(cab.get("lamp_green_label")),
+			"label": "[L] " + str(cab.get("lamp_green_label")),
 			"dir": "coil",
 			"addr": c_addr + 0 if c_addr >= 0 else -1,
 			"active": bool(forced_map["lamp_g"]) if g_forced else (bool(cab.get("lamp_green_on")) or bool(cab.get("active"))),
@@ -2427,7 +2427,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 			var y_forced := forced_map.has("lamp_y")
 			items.append({
 				"key": "lamp_y",
-				"label": "● " + str(cab.get("lamp_yellow_label")),
+				"label": "[L] " + str(cab.get("lamp_yellow_label")),
 				"dir": "coil",
 				"addr": c_addr + 1 if c_addr >= 0 else -1,
 				"active": bool(forced_map["lamp_y"]) if y_forced else bool(cab.get("lamp_yellow_on")),
@@ -2436,7 +2436,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		var r_forced := forced_map.has("lamp_r")
 		items.append({
 			"key": "lamp_r",
-			"label": "● " + str(cab.get("lamp_red_label")),
+			"label": "[L] " + str(cab.get("lamp_red_label")),
 			"dir": "coil",
 			"addr": c_addr + 2 if c_addr >= 0 else -1,
 			"active": bool(forced_map["lamp_r"]) if r_forced else bool(cab.get("lamp_red_on")),
@@ -2456,7 +2456,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 			var cur_ir := int(slot_item.get("modbus_input_reg", -1))
 			items.append({
 				"key": "dyn_" + io_id,
-				"label": "◎ " + lbl,
+				"label": "[P] " + lbl,
 				"kind": mkind,
 				"dir": "input_reg",
 				"addr": cur_ir,
@@ -2476,7 +2476,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 			var cur_hr := int(slot_item.get("modbus_holding_reg", -1))
 			items.append({
 				"key": "dyn_" + io_id,
-				"label": "▥ " + lbl,
+				"label": "[M] " + lbl,
 				"kind": mkind,
 				"dir": "holding_reg",
 				"addr": cur_hr,
@@ -2494,7 +2494,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 				addr_txt = "%s/%s" % [_format_iec_address(cur_in, "IX"), _format_iec_address(cur_in + 1, "IX")]
 			items.append({
 				"key": "dyn_" + io_id,
-				"label": "❖ " + lbl,
+				"label": "[3] " + lbl,
 				"kind": mkind,
 				"dir": "input",
 				"addr": cur_in,
@@ -2504,7 +2504,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 				"forced": false,
 			})
 		elif mkind in ["push_button", "button", "switch_select"]:
-			var icon := "◈ " if mkind == "switch_select" else "■ "
+			var icon := "[S] " if mkind == "switch_select" else "[B] "
 			var cur_in := int(slot_item.get("modbus_input", -1))
 			items.append({
 				"key": "dyn_" + io_id,
@@ -2522,7 +2522,7 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 			var lamp_on := bool(forced_map[lamp_key]) if l_forced else (ModbusTCP.get_coil(cur_coil) if cur_coil >= 0 else false)
 			items.append({
 				"key": lamp_key,
-				"label": "● " + lbl,
+				"label": "[L] " + lbl,
 				"kind": mkind,
 				"dir": "coil",
 				"addr": cur_coil,
@@ -2677,7 +2677,7 @@ func _refresh_io_status_list() -> void:
 				var cab_items: Array[Dictionary] = group_items_cache.get(obj.get_instance_id(), [])
 				for item in cab_items:
 					var item_btn := Button.new()
-					item_btn.text = "  └ " + str(item["label"])
+					item_btn.text = "  |- " + str(item["label"])
 					item_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 					item_btn.clip_text = true
 					item_btn.custom_minimum_size = Vector2(124, 22)
@@ -2713,11 +2713,11 @@ func _refresh_io_status_list() -> void:
 		var kind := str(obj.get_meta("kind", ""))
 		if kind in ["cabinet", "water_tank"]:
 			var expanded := bool(io_status_expanded_cabinets.get(obj.get_instance_id(), true))
-			var grp_title := ("▾ " if expanded else "▸ ") + String(obj.name)
+			var grp_title := ("v " if expanded else "> ") + String(obj.name)
 			if btn.text != grp_title:
 				btn.text = grp_title
 		else:
-			var target_text: String = ("▸ " + String(obj.name)) if is_selected else String(obj.name)
+			var target_text: String = ("> " + String(obj.name)) if is_selected else String(obj.name)
 			if btn.text != target_text:
 				btn.text = target_text
 		var io_col := _object_io_color(obj)
@@ -2781,7 +2781,7 @@ func _refresh_io_status_list() -> void:
 						)
 					)
 					_apply_status_btn_style(c_btn, c_io_col, false)
-					var next_cbtn_txt := "  └ " + str(item["label"])
+					var next_cbtn_txt := "  |- " + str(item["label"])
 					if c_btn.text != next_cbtn_txt:
 						c_btn.text = next_cbtn_txt
 					_set_label_if_changed(
@@ -3830,7 +3830,7 @@ func _build_object_dialog(ui_root: Control) -> void:
 	header.add_child(heading)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕"
+	close_btn.text = "×"
 	close_btn.custom_minimum_size = Vector2(30, 28)
 	close_btn.pressed.connect(
 		func():
@@ -4090,7 +4090,7 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	header.add_child(modbus_enabled_check)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕"
+	close_btn.text = "×"
 	close_btn.custom_minimum_size = Vector2(30, 28)
 	close_btn.pressed.connect(
 		func():
@@ -4489,7 +4489,7 @@ func _build_ladder_dialog(ui_root: Control) -> void:
 	header.add_child(ladder_enabled_check)
 
 	var close_btn := Button.new()
-	close_btn.text = "✕"
+	close_btn.text = "×"
 	close_btn.custom_minimum_size = Vector2(30, 28)
 	close_btn.pressed.connect(
 		func():
@@ -5011,17 +5011,17 @@ func _refresh_modbus_dialog() -> void:
 			for idx in range(3):
 				var lvl_names := ["Low Level (>=20%)", "Mid Level (>=50%)", "High Level (>=85%)"]
 				var ix_txt := _format_iec_address(base_in + idx, "IX") if base_in >= 0 else "-"
-				_add_modbus_subrow_label("  └ " + lvl_names[idx], "DI +%d" % idx, "-", ix_txt)
-			_add_modbus_word_subrow(obj, "  └ Level % (IR)", "modbus_input_reg", "IW", false)
+				_add_modbus_subrow_label("  |- " + lvl_names[idx], "DI +%d" % idx, "-", ix_txt)
+			_add_modbus_word_subrow(obj, "  |- Level % (IR)", "modbus_input_reg", "IW", false)
 		elif kind == "stack_light":
 			var base_coil := int(obj.get_meta("modbus_coil", -1))
 			for idx in range(3):
 				var lamp_names := ["Green Lamp", "Yellow Lamp", "Red Lamp"]
 				var qx_txt := _format_iec_address(base_coil + idx, "QX") if base_coil >= 0 else "-"
-				_add_modbus_subrow_label("  └ " + lamp_names[idx], "DO +%d" % idx, qx_txt, "-")
+				_add_modbus_subrow_label("  |- " + lamp_names[idx], "DO +%d" % idx, qx_txt, "-")
 		elif kind in ["vision_sensor", "rgb_sensor"]:
-			_add_modbus_word_subrow(obj, "  └ Out Word (IR)", "modbus_input_reg", "IW", false)
-			_add_modbus_word_subrow(obj, "  └ Cmd Word (HR)", "modbus_holding_reg", "QW", true)
+			_add_modbus_word_subrow(obj, "  |- Out Word (IR)", "modbus_input_reg", "IW", false)
+			_add_modbus_word_subrow(obj, "  |- Cmd Word (HR)", "modbus_holding_reg", "QW", true)
 		elif kind == "cabinet":
 			var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
 			for slot_item in dyn_slots:
@@ -5029,7 +5029,7 @@ func _refresh_modbus_dialog() -> void:
 					continue
 				var mk := str(slot_item.get("kind", "lamp"))
 				var slbl := str(slot_item.get("label", "MOD"))
-				_add_cabinet_slot_modbus_row(obj, slot_item, "  └ " + slbl, mk)
+				_add_cabinet_slot_modbus_row(obj, slot_item, "  |- " + slbl, mk)
 
 
 func _add_cabinet_slot_modbus_row(_cab: Node3D, slot_item: Dictionary, label_text: String, mkind: String) -> void:
@@ -5962,7 +5962,7 @@ func _add_modbus_row_buttons(
 	)
 	row.add_child(auto_btn)
 	var clr_btn := Button.new()
-	clr_btn.text = "✕"
+	clr_btn.text = "×"
 	clr_btn.custom_minimum_size = Vector2(26, 0)
 	clr_btn.tooltip_text = "Clear address"
 	clr_btn.pressed.connect(
@@ -6070,7 +6070,7 @@ func _refresh_modbus_conflict_warning() -> void:
 			if addr < other_addr + span_b and other_addr < addr + span_a:
 				var overlap_addr := maxi(addr, other_addr)
 				var fmt := _format_word_address(overlap_addr, pfx) if is_w else _format_iec_address(overlap_addr, pfx)
-				warnings.append("⚠ %s overlaps with %s" % [fmt, obj.name])
+				warnings.append("[!] %s overlaps with %s" % [fmt, obj.name])
 				break
 	modbus_conflict_label.visible = not warnings.is_empty()
 	modbus_conflict_label.text = "\n".join(warnings)
