@@ -394,10 +394,14 @@ func _pick_stand_position(target: Node3D, avoid_npcs: bool = false) -> bool:
 func _physics_process(delta: float) -> void:
 	var scene := get_parent()
 	var in_edit := scene != null and scene.get("edit_mode") != null and bool(scene.get("edit_mode"))
-	if in_edit:
+	var is_stopped := scene != null and scene.get("running") != null and not bool(scene.get("running"))
+	if in_edit or is_stopped:
 		_was_edit_mode = true
+		_chatting = false
+		_chat_partner = null
+		_inspecting = false
 		_animate_idle(delta)
-		_set_status_label("Standby (Edit Mode)", Color("9cb3c4"))
+		_set_status_label("Standby (Edit Mode)" if in_edit else "Standby (STOP)", Color("9cb3c4"))
 		return
 	if _was_edit_mode:
 		_was_edit_mode = false
@@ -623,6 +627,12 @@ func _start_inspecting(target: Node3D) -> void:
 func _play_npc_sound(sound_id: String, volume_db: float = -6.0, pitch: float = 1.0, max_dist: float = 22.0) -> void:
 	if not sound_enabled:
 		return
+	var scene := get_parent()
+	if scene != null:
+		if scene.get("edit_mode") != null and bool(scene.get("edit_mode")):
+			return
+		if scene.get("running") != null and not bool(scene.get("running")):
+			return
 	var fa := get_node_or_null("/root/FactoryAudio")
 	if fa != null:
 		fa.call("play_one_shot", self, sound_id, volume_db, max_dist, pitch)

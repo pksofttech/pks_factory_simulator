@@ -1,10 +1,10 @@
 78098b89c88a74ebe8c20117b8754620
 ::res://::1795068805
 agy.txt::TextFile::-1::1795059871::0::1::::<><><>0<>0<><>::
-export_presets.cfg::TextFile::-1::1795067733::0::1::::<><><>0<>0<><>::
+export_presets.cfg::TextFile::-1::1795071306::0::1::::<><><>0<>0<><>::
 loading_screen.gd::GDScript::3562646622168996223::1795066505::0::1::::<>Control<><>0<>0<><>::
 loading_screen.tscn::PackedScene::-1::1795066383::0::1::::<><><>0<>0<><>::
-main.gd::GDScript::3365663170635895031::1795069035::0::1::::<>Node3D<><>0<>0<><>::
+main.gd::GDScript::3365663170635895031::1795071433::0::1::::<>Node3D<><>0<>0<><>::
 main.tscn::PackedScene::286737175616461848::1794804114::0::1::::<><><>0<>0<><>::uid://bn7l8lxcpw4gx::::res://main.gd
 node_3d.tscn::PackedScene::3449290665353995904::1794837558::0::1::::<><><>0<>0<><>::
 README.md::TextFile::-1::1795068805::0::1::::<><><>0<>0<><>::
@@ -74,7 +74,7 @@ theme_ui.gd::GDScript::2874819543240663132::1794757662::0::1::::MCPThemeUIHandle
 tilemap.gd::GDScript::2188802190026392168::1794757662::0::1::::MCPTileMapHandlers<>RefCounted<><>0<>1<><>::
 tileset.gd::GDScript::8770027381052989730::1794757662::0::1::::MCPTileSetHandlers<>RefCounted<><>0<>1<><>::
 visual_shader.gd::GDScript::1810938645496152596::1794757662::0::1::::MCPVisualShaderHandlers<>RefCounted<><>0<>1<><>::
-::res://assets/::1795066488
+::res://assets/::1795071304
 ::res://assets/box/::1794826946
 box_plastic.glb::PackedScene::2094451782740446457::1794826915::1794826946::1::::<><><>0<>0<>e04f69a1ac26cd39716807f6a54a48de<>res://.godot/imported/box_plastic.glb-a4edb9533e30f8a3890ba5525bbf34ee.scn::
 box_visual.glb::PackedScene::326864949052302997::1794807903::1794807910::1::::<><><>0<>0<>8808d667e8a28ab1f44795f77ead9f42<>res://.godot/imported/box_visual.glb-7ce7129c262110736b76d653125caed1.scn::
@@ -91,6 +91,8 @@ rubber_belt_con01.jpeg::CompressedTexture2D::4299828580359312748::1794797353::17
 rubber_belt_normal.png::CompressedTexture2D::3467245554850578168::1794797398::1794797399::1::::<><><>0<>0<>d96a8aaede019ea76c7a8530bb780209<>res://.godot/imported/rubber_belt_normal.png-124d341f7aa835631e427ed2740a363c.ctex::
 ::res://assets/emitter/::1794814568
 emitter_visual.glb::PackedScene::1692918480201283356::1794814405::1794814568::1::::<><><>0<>0<>20ff5e6278712a2f64575c21e5ca6ede<>res://.godot/imported/emitter_visual.glb-08c7583a43fe5226edf57115f60f4c04.scn::
+::res://assets/fonts/::1795071304
+NotoSansThaiUI-Regular.ttf::FontFile::5895974630819891908::1795071304::1795071451::1::::<><><>0<>0<>05f091d792db930afbb36c38b3160bad<>res://.godot/imported/NotoSansThaiUI-Regular.ttf-04f1e7e3783403be0d2b09b984077313.fontdata::
 ::res://assets/pusher/::1794811383
 pusher_visual.glb::PackedScene::8290388638713337809::1794811381::1794811383::1::::<><><>0<>0<>961ab51f087bcf2b033b6e14c6affbd3<>res://.godot/imported/pusher_visual.glb-e8439976c3a1d1bbc4d677b8a93d10f7.scn::
 ::res://assets/sensor/::1794807911
@@ -105,7 +107,7 @@ turn_visual_rubber_belt_normal.png::CompressedTexture2D::6422209459460521377::17
 factory_audio.gd::GDScript::7420362092921755098::1795066081::0::1::::<>Node<><>0<>0<><>::
 modbus_tcp.gd::GDScript::8867010103310885829::1795067731::0::1::::<>Node<><>0<>0<><>::
 ::res://build/::1795067735
-::res://build/web/::1795067738
+::res://build/web/::1795069535
 index.apple-touch-icon.png::CompressedTexture2D::8236363761050043359::1795067738::1795069535::1::::<><><>0<>0<>1bab953d9920a40193f4ef516a5b107b<>res://.godot/imported/index.apple-touch-icon.png-21031f526f7942c8019a62913b80e091.ctex::
 index.icon.png::CompressedTexture2D::8452511015640840576::1795067738::1795069535::1::::<><><>0<>0<>0bf96dd79c19fa650edc8d5db936d3e0<>res://.godot/imported/index.icon.png-a9d2f4f7433eeddc29dad75f5e7f8710.ctex::
 index.png::CompressedTexture2D::9158886124823524752::1795067738::1795069535::1::::<><><>0<>0<>769497a82510fa6708f8f32258268041<>res://.godot/imported/index.png-7e97af7272d6fa0065ffc53e96463470.ctex::
@@ -130,7 +132,7 @@ light_curtain.tscn::PackedScene::-1::1794898524::0::1::::<><><>0<>0<><>::res://o
 maintenance_npc.tscn::PackedScene::-1::1795066239::0::1::::<><><>0<>0<><>::
 motor_fan.gd::GDScript::2767392507651797771::1794910147::0::1::::<>StaticBody3D<><>0<>0<><>::
 motor_fan.tscn::PackedScene::-1::1794897169::0::1::::<><><>0<>0<><>::res://objects/motor_fan.gd
-operator_npc.gd::GDScript::5540485565386035874::1795066284::0::1::::<>Node3D<><>0<>0<><>::
+operator_npc.gd::GDScript::5540485565386035874::1795070736::0::1::::<>Node3D<><>0<>0<><>::
 operator_npc.tscn::PackedScene::-1::1794905391::0::1::::<><><>0<>0<><>::res://objects/operator_npc.gd
 pallet.tscn::PackedScene::-1::1794968143::0::1::::<><><>0<>0<><>::
 prop_barrel.tscn::PackedScene::-1::1794970522::0::1::::<><><>0<>0<><>::

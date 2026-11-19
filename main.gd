@@ -285,6 +285,13 @@ var axis_gizmo: Control
 var start_button: Button
 var status_toggle_button: Button
 var npc_toggle_button: Button
+var help_button: Button
+var help_dialog: PanelContainer
+var help_dialog_backdrop: ColorRect
+var _help_select_tab_cb: Callable
+var _help_rebuild_cb: Callable
+var _help_current_tab: int = 0
+var guide_lang: String = "en"
 var npcs_enabled: bool = true
 var npc_operator_enabled: bool = true
 var npc_tester_enabled: bool = true
@@ -384,6 +391,15 @@ func _notification(what: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+		_set_help_dialog_visible(not help_dialog.visible if is_instance_valid(help_dialog) else true)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if is_instance_valid(help_dialog) and help_dialog.visible:
+			_set_help_dialog_visible(false)
+			get_viewport().set_input_as_handled()
+			return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11:
 		var mode := DisplayServer.window_get_mode()
 		var is_full := (
@@ -1681,6 +1697,21 @@ func _build_ui() -> void:
 	)
 	bottom_left_bar.add_child(npc_toggle_button)
 
+	help_button = Button.new()
+	help_button.text = "Guide"
+	help_button.icon = _make_svg_icon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>')
+	help_button.custom_minimum_size = Vector2(72, 30)
+	help_button.add_theme_font_size_override("font_size", 11)
+	help_button.tooltip_text = "User Guide & Example Projects (F1)"
+	_style_accent_button(help_button, "1b4f6e", "23668f", "3b8cb8")
+	help_button.pressed.connect(
+		func():
+			_set_help_dialog_visible(
+				not help_dialog.visible if is_instance_valid(help_dialog) else true
+			),
+	)
+	bottom_left_bar.add_child(help_button)
+
 	var info_pill := PanelContainer.new()
 	info_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_pill.add_theme_stylebox_override(
@@ -1717,6 +1748,7 @@ func _build_ui() -> void:
 	_build_npc_dialog(ui_root)
 	_build_modbus_dialog(ui_root)
 	_build_ladder_dialog(ui_root)
+	_build_help_dialog(ui_root)
 
 
 func _build_io_status_panel(ui_root: Control) -> void:
@@ -3780,6 +3812,573 @@ func _build_npc_dialog(ui_root: Control) -> void:
 	vbox.add_child(reset_btn)
 
 
+func _set_help_dialog_visible(visible_state: bool, tab_idx: int = -1) -> void:
+	if is_instance_valid(help_dialog):
+		help_dialog.visible = visible_state
+	if is_instance_valid(help_dialog_backdrop):
+		help_dialog_backdrop.visible = visible_state
+	if visible_state and tab_idx >= 0 and _help_select_tab_cb.is_valid():
+		_help_select_tab_cb.call(tab_idx)
+
+
+func _make_guide_theme() -> Theme:
+	var t := Theme.new()
+	var path := "res://assets/fonts/NotoSansThaiUI-Regular.ttf"
+	var thai_font: Font = null
+	if FileAccess.file_exists(path):
+		var ff := FontFile.new()
+		if ff.load_dynamic_font(path) == OK:
+			thai_font = ff
+	if thai_font == null and ResourceLoader.exists(path):
+		thai_font = load(path) as Font
+	if thai_font != null:
+		var fv := FontVariation.new()
+		fv.base_font = ThemeDB.fallback_font
+		fv.fallbacks = [thai_font]
+		t.default_font = fv
+	return t
+
+
+func _build_help_dialog(ui_root: Control) -> void:
+	help_dialog_backdrop = ColorRect.new()
+	help_dialog_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	help_dialog_backdrop.color = Color(0.02, 0.04, 0.06, 0.5)
+	help_dialog_backdrop.visible = false
+	help_dialog_backdrop.gui_input.connect(
+		func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+				_set_help_dialog_visible(false),
+	)
+	ui_root.add_child(help_dialog_backdrop)
+
+	help_dialog = PanelContainer.new()
+	help_dialog.theme = _make_guide_theme()
+	help_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	help_dialog.custom_minimum_size = Vector2(720, 560)
+	help_dialog.offset_left = -360
+	help_dialog.offset_right = 360
+	help_dialog.offset_top = -280
+	help_dialog.offset_bottom = 280
+	var style := _ui_stylebox(Color(0.068, 0.106, 0.149, 0.97), Color("36566e"), 14, 1, 18, 16)
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 16
+	help_dialog.add_theme_stylebox_override("panel", style)
+	help_dialog.visible = false
+	ui_root.add_child(help_dialog)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	help_dialog.add_child(vbox)
+
+	var hdr := HBoxContainer.new()
+	hdr.add_theme_constant_override("separation", 6)
+	vbox.add_child(hdr)
+	var title := Label.new()
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 15)
+	title.add_theme_color_override("font_color", Color("eef7fa"))
+	hdr.add_child(title)
+
+	var en_btn := Button.new()
+	en_btn.text = "EN"
+	en_btn.custom_minimum_size = Vector2(36, 26)
+	en_btn.add_theme_font_size_override("font_size", 11)
+	hdr.add_child(en_btn)
+
+	var th_btn := Button.new()
+	th_btn.text = "TH"
+	th_btn.custom_minimum_size = Vector2(36, 26)
+	th_btn.add_theme_font_size_override("font_size", 11)
+	hdr.add_child(th_btn)
+
+	var close_btn := Button.new()
+	close_btn.text = "×"
+	close_btn.custom_minimum_size = Vector2(30, 28)
+	close_btn.pressed.connect(func(): _set_help_dialog_visible(false))
+	hdr.add_child(close_btn)
+
+	var tab_bar := HBoxContainer.new()
+	tab_bar.add_theme_constant_override("separation", 6)
+	vbox.add_child(tab_bar)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	var content_root := VBoxContainer.new()
+	content_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_root.add_theme_constant_override("separation", 10)
+	scroll.add_child(content_root)
+
+	var pages: Array[VBoxContainer] = []
+	var tab_btns: Array[Button] = []
+
+	var add_section := func(parent: VBoxContainer, heading_txt: String, lines: Array) -> void:
+		var h := Label.new()
+		h.text = heading_txt
+		h.add_theme_font_size_override("font_size", 13)
+		h.add_theme_color_override("font_color", Color("6ce5ff"))
+		parent.add_child(h)
+		for ln in lines:
+			var l := Label.new()
+			l.text = str(ln)
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.add_theme_font_size_override("font_size", 12)
+			l.add_theme_color_override("font_color", Color("d2e4ef"))
+			parent.add_child(l)
+
+	var select_tab := func(idx: int) -> void:
+		_help_current_tab = clampi(idx, 0, maxi(0, pages.size() - 1))
+		for i in range(pages.size()):
+			pages[i].visible = (i == _help_current_tab)
+			if i == _help_current_tab:
+				_style_accent_button(tab_btns[i], "1b4f6e", "23668f", "3b8cb8")
+			else:
+				tab_btns[i].remove_theme_stylebox_override("normal")
+				tab_btns[i].remove_theme_stylebox_override("hover")
+				tab_btns[i].remove_theme_stylebox_override("pressed")
+				tab_btns[i].remove_theme_color_override("font_color")
+		scroll.scroll_vertical = 0
+	_help_select_tab_cb = select_tab
+
+	var rebuild_pages := func() -> void:
+		var th := (guide_lang == "th")
+		title.text = "คู่มือการใช้งาน - PKS FACTORY SIMULATOR (F1)" if th else "USER GUIDE - PKS FACTORY SIMULATOR (F1)"
+		if th:
+			_style_accent_button(th_btn, "1b4f6e", "23668f", "3b8cb8")
+			en_btn.remove_theme_stylebox_override("normal")
+			en_btn.remove_theme_stylebox_override("hover")
+			en_btn.remove_theme_stylebox_override("pressed")
+			en_btn.remove_theme_color_override("font_color")
+		else:
+			_style_accent_button(en_btn, "1b4f6e", "23668f", "3b8cb8")
+			th_btn.remove_theme_stylebox_override("normal")
+			th_btn.remove_theme_stylebox_override("hover")
+			th_btn.remove_theme_stylebox_override("pressed")
+			th_btn.remove_theme_color_override("font_color")
+
+		for c in tab_bar.get_children():
+			c.queue_free()
+		for c in content_root.get_children():
+			c.queue_free()
+		pages.clear()
+		tab_btns.clear()
+
+		# Page 0: Quick Start & Examples
+		var p_quick := VBoxContainer.new()
+		p_quick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_quick.add_theme_constant_override("separation", 8)
+		content_root.add_child(p_quick)
+		pages.append(p_quick)
+		add_section.call(
+			p_quick,
+			"1. เริ่มต้นใช้งานด่วน (Quick Start)" if th else "1. Quick Start",
+			[
+				"- เลือกโหมดควบคุมที่แถบด้านบน: Internal Ladder PLC, Modbus TCP (Desktop), หรือ PLC:OFF",
+				"- กดปุ่มสีเขียว Play/Start (หรือปุ่ม Start บนตู้ Control Cabinet) เพื่อเริ่มจำลองการทำงาน",
+				"- กดปุ่ม 'Status' เพื่อดูสถานะ Coil, Input และเครื่องจักรทุกตัวแบบเรียลไทม์",
+				"- กดปุ่ม 'Edit' เพื่อเพิ่ม ย้าย หมุน หรือจัดวางเครื่องจักรและพร็อพตกแต่ง",
+			] if th else [
+				"- Choose a controller mode on the top bar: Internal Ladder PLC, Modbus TCP (Desktop), or PLC:OFF.",
+				"- Press the green Play/Start button (or Start on the Control Cabinet) to run the simulation.",
+				"- Click 'Status' to monitor live Coils, Inputs, and machine states in real time.",
+				"- Toggle 'Edit' to add, move, rotate, or wire factory equipment and props.",
+			],
+		)
+		var ex_hdr := Label.new()
+		ex_hdr.text = "2. โหลดโปรเจกต์ตัวอย่างสำเร็จรูป" if th else "2. Load Built-in Example Projects"
+		ex_hdr.add_theme_font_size_override("font_size", 13)
+		ex_hdr.add_theme_color_override("font_color", Color("6ce5ff"))
+		p_quick.add_child(ex_hdr)
+		var examples := [
+			[
+				"01 - สายพานคัดแยก Vision" if th else "01 - Vision Sorting Line",
+				"สายพาน + Vision Sensor + Pusher + Reject Bin (Ladder PLC)" if th else "Conveyor + Vision Sensor + Pusher + Reject Bin (Ladder PLC)",
+				"res://example/01_conveyor_sorting_line.pksfac",
+			],
+			[
+				"02 - ควบคุมระดับน้ำในถัง" if th else "02 - Water Tank Level Control",
+				"Water Tank + Pump + Solenoid Valve + Cooling Fan (Ladder PLC)" if th else "Water Tank + Pump + Solenoid Valve + Cooling Fan (Ladder PLC)",
+				"res://example/02_water_tank_level_control.pksfac",
+			],
+			[
+				"03 - สายพานเลี้ยว 90° คลังสินค้า" if th else "03 - 90° L-Turn Warehouse",
+				"สายพานเลี้ยว 90° + ม่านแสงนิรภัย Light Curtain + พร็อพคลังสินค้า" if th else "L-Turn Conveyor + Safety Light Curtain + Warehouse Props",
+				"res://example/03_l_turn_warehouse_line.pksfac",
+			],
+		]
+		for ex in examples:
+			var card := PanelContainer.new()
+			card.add_theme_stylebox_override("panel", _ui_stylebox(Color(0.09, 0.14, 0.2, 0.9), Color("29485f"), 8, 1, 12, 8))
+			p_quick.add_child(card)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			card.add_child(row)
+			var info_col := VBoxContainer.new()
+			info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(info_col)
+			var ex_name := Label.new()
+			ex_name.text = str(ex[0])
+			ex_name.add_theme_font_size_override("font_size", 12)
+			ex_name.add_theme_color_override("font_color", Color("eef7fa"))
+			info_col.add_child(ex_name)
+			var ex_desc := Label.new()
+			ex_desc.text = str(ex[1])
+			ex_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ex_desc.add_theme_font_size_override("font_size", 11)
+			ex_desc.add_theme_color_override("font_color", Color("9cb3c4"))
+			info_col.add_child(ex_desc)
+			var load_ex_btn := Button.new()
+			load_ex_btn.text = "โหลด" if th else "Load"
+			load_ex_btn.custom_minimum_size = Vector2(72, 30)
+			_style_accent_button(load_ex_btn, "1e6b45", "278758", "3eb87a")
+			var ex_path := str(ex[2])
+			var ex_title := str(ex[0])
+			load_ex_btn.pressed.connect(
+				func():
+					if _load_project_from_path(ex_path):
+						_set_help_dialog_visible(false)
+						if is_instance_valid(sandbox_label):
+							sandbox_label.text = "Loaded Example: " + ex_title,
+			)
+			row.add_child(load_ex_btn)
+
+		# Page 1: Controls
+		var p_ctrl := VBoxContainer.new()
+		p_ctrl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_ctrl.add_theme_constant_override("separation", 8)
+		p_ctrl.visible = false
+		content_root.add_child(p_ctrl)
+		pages.append(p_ctrl)
+		add_section.call(
+			p_ctrl,
+			"การควบคุมมุมกล้อง (Camera)" if th else "Camera Navigation",
+			[
+				"- คลิกขวาค้าง + ลาก: หมุนมุมกล้องรอบโรงงาน (Orbit)",
+				"- คลิกกลางค้าง + ลาก: เลื่อนมุมกล้อง (Pan)",
+				"- ลูกล้อเมาส์ (Scroll Wheel): ซูมเข้า / ซูมออก",
+				"- ปุ่ม R: รีเซ็ตมุมกล้องกลับสู่มุมมองเริ่มต้น",
+				"- ปุ่ม F11: สลับโหมดเต็มหน้าจอ (Fullscreen)",
+			] if th else [
+				"- Right-Click + Drag: Orbit camera around the factory floor.",
+				"- Middle-Click + Drag: Pan camera horizontally / vertically.",
+				"- Mouse Scroll Wheel: Zoom in and out.",
+				"- R Key: Reset camera back to the default overview.",
+				"- F11 Key: Toggle fullscreen mode.",
+			],
+		)
+		add_section.call(
+			p_ctrl,
+			"การควบคุม Simulation & หน้าต่าง" if th else "Simulation & Panels",
+			[
+				"- ปุ่ม Play / Stop: เริ่มหรือหยุดฟิสิกส์, การสแกน PLC และ NPC",
+				"- ปุ่ม Status: เปิด/ปิดตารางแสดงสถานะ I/O ของอุปกรณ์ทั้งหมด",
+				"- ปุ่ม Sound: เปิด/ปิดเสียงเอฟเฟกต์ทั้งหมดในโรงงาน",
+				"- ปุ่ม F1: เปิดหรือปิดหน้าต่างคู่มือนี้ได้ทุกเมื่อ",
+				"- ปุ่ม Esc: ยกเลิกการวางวัตถุหรือปิดหน้าต่างที่เปิดอยู่",
+			] if th else [
+				"- Play / Stop button: Start or pause physics, PLC scan, and NPC patrols.",
+				"- Status button: Toggle the Object Status & I/O live monitor panel.",
+				"- Sound button: Mute or unmute factory audio.",
+				"- F1 Key: Open or close this User Guide at any time.",
+				"- Esc Key: Cancel object placement or close active dialogs.",
+			],
+		)
+
+		# Page 2: Edit Mode
+		var p_edit := VBoxContainer.new()
+		p_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_edit.add_theme_constant_override("separation", 8)
+		p_edit.visible = false
+		content_root.add_child(p_edit)
+		pages.append(p_edit)
+		add_section.call(
+			p_edit,
+			"การสร้างและแก้ไขเลย์เอาต์ (Edit Mode)" if th else "Building & Layout Editing",
+			[
+				"- กดปุ่ม 'Edit' เพื่อเข้าโหมดแก้ไข (ระบบจะหยุด Simulation อัตโนมัติ)",
+				"- คลิกขวา (ไม่ลาก): เปิดหน้าต่าง 'Add Factory Object' เพื่อเลือกวางอุปกรณ์",
+				"- คลิกขวาขณะกำลังวางวัตถุ: ยกเลิกการวางและกลับสู่โหมด Select ทันที",
+				"- คลิกซ้ายเลือกวัตถุ และลากซ้ายเพื่อย้ายตำแหน่งบนตาราง Grid",
+				"- Shift + ลากซ้าย (หรือกด Q / E): หมุนวัตถุทีละ 90°",
+				"- ปุ่ม PageUp / PageDown: ปรับระดับความสูง (แกน Z)",
+				"- ปุ่ม Delete: ลบวัตถุที่เลือกอยู่",
+				"- Ctrl+Z / Ctrl+Y (หรือ Ctrl+Shift+Z): ย้อนกลับ (Undo) และทำซ้ำ (Redo)",
+			] if th else [
+				"- Click 'Edit' on the top toolbar to enter Edit Mode (simulation pauses safely).",
+				"- Right-Click (without dragging): Open 'Add Factory Object'.",
+				"- Right-Click while placing an object: Cancel placement and return to Select mode.",
+				"- Left-Click an object to select it; Left-Drag to move it on the grid.",
+				"- Shift + Left-Drag (or Q / E keys): Rotate selected or placing object in 90° steps.",
+				"- PageUp / PageDown: Adjust vertical height offset (Z).",
+				"- Delete Key: Remove selected object.",
+				"- Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z): Undo and Redo layout edits.",
+			],
+		)
+		add_section.call(
+			p_edit,
+			"การบันทึกโปรเจกต์และขนาดพื้นโรงงาน" if th else "Projects & Environment",
+			[
+				"- ใช้ Open / Save / Save As เพื่อบันทึกฉากและโค้ด PLC เป็นไฟล์ .pksfac",
+				"- กดปุ่มขนาดพื้น (เช่น 40×40) เพื่อปรับขนาดโรงงานและเปลี่ยนธีม Decor",
+			] if th else [
+				"- Use Open / Save / Save As to store complete layouts + PLC programs as .pksfac files.",
+				"- Click the Floor Size button (e.g. 40×40) to resize the workspace or change Decor Theme.",
+			],
+		)
+
+		# Page 3: PLC & Modbus
+		var p_plc := VBoxContainer.new()
+		p_plc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_plc.add_theme_constant_override("separation", 8)
+		p_plc.visible = false
+		content_root.add_child(p_plc)
+		pages.append(p_plc)
+		add_section.call(
+			p_plc,
+			"โหมดควบคุม PLC (Controller Modes)" if th else "Controller Modes",
+			[
+				"- PLC:OFF: อุปกรณ์ Actuator ทั้งหมด (สายพาน, Pusher, Valve ฯลฯ) จะหยุดนิ่ง ยกเว้นกด Force ON เอง ส่วน Sensor ยังตรวจจับตามจริง",
+				"- Internal Ladder PLC: ซอฟต์แวร์ PLC ในตัว รองรับภาษา Mitsubishi (X0/Y0/M0/T0/C0) และ IEC (%IX0.0/%QX0.0) ใช้งานได้ทั้ง Desktop และ Web",
+				"- Modbus TCP (เฉพาะ Desktop): เชื่อมต่อ PLC ภายนอกหรือ Python/Node-RED ผ่าน Modbus TCP Server (พอร์ต 1502) หรือ Client",
+			] if th else [
+				"- PLC:OFF: All actuators (Conveyors, Pushers, Valves, etc.) remain stopped unless manually Forced ON. Sensors still detect parts.",
+				"- Internal Ladder PLC: Built-in soft PLC supporting Mitsubishi (X0/Y0/M0/T0/C0) and IEC (%IX0.0/%QX0.0) syntax. Works on both Desktop and Web.",
+				"- Modbus TCP (Desktop only): Connect external PLCs or Python/Node-RED scripts via Modbus TCP Server (port 1502) or Client mode.",
+			],
+		)
+		add_section.call(
+			p_plc,
+			"การผูก I/O และการทดสอบ Force" if th else "I/O Mapping & Force Panel",
+			[
+				"- เปิดหน้าต่าง 'Modbus' เพื่อกำหนดเลข Address ของ Coil (DO), Discrete Input (DI), และ Register (IR/HR)",
+				"- คลิกเลือกเครื่องจักรใดก็ได้เพื่อเปิดแถบ Force ด้านขวาสำหรับทดลองสั่ง ON/OFF ด้วยมือ",
+			] if th else [
+				"- Open 'Modbus' to assign Coil (DO), Discrete Input (DI), and Register (IR/HR) addresses.",
+				"- Select any machine to open the right-side Force panel and test outputs manually.",
+			],
+		)
+
+		# Page 4: NPCs & Props
+		var p_npc := VBoxContainer.new()
+		p_npc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_npc.add_theme_constant_override("separation", 8)
+		p_npc.visible = false
+		content_root.add_child(p_npc)
+		pages.append(p_npc)
+		add_section.call(
+			p_npc,
+			"ตัวละคร NPC อัตโนมัติในโรงงาน" if th else "Autonomous Factory NPCs",
+			[
+				"- Operator: เดินตรวจสายพาน, Emitter, Pusher, Stopper และเครื่องจักรหลัก",
+				"- Supervisor (Tester): ตรวจ Sensor, Turn Table, Control Cabinet และถังน้ำ",
+				"- Safety: เฝ้าระวัง Light Curtain, Stack Light, E-STOP และวิ่งไปจุดแจ้งเตือนทันทีเมื่อเกิด Alert",
+				"- Maintenance: ตรวจปั๊มน้ำ, พัดลม, Solenoid Valve และ Water Tank",
+				"- QC Inspector: ตรวจ Vision/RGB Sensor, Reject Bin และ Remover",
+			] if th else [
+				"- Operator: Patrols conveyors, emitters, pushers, stoppers, and process units.",
+				"- Supervisor (Tester): Audits sensors, turn tables, cabinets, and tanks.",
+				"- Safety: Monitors light curtains, stack lights, E-STOP, and responds immediately to alerts.",
+				"- Maintenance: Checks pumps, fans, solenoid valves, and water tanks.",
+				"- QC Inspector: Checks vision/RGB sensors, reject bins, and removers.",
+			],
+		)
+		add_section.call(
+			p_npc,
+			"พฤติกรรมและการตั้งค่า NPC" if th else "NPC Behavior & Settings",
+			[
+				"- NPC เดินอ้อมสิ่งกีดขวางด้วย A* Pathfinding และแวะพัก/ลงบันทึกที่ QC Desk, Production Board, Workbench หรือ Locker เมื่อตรวจครบรอบ",
+				"- เมื่อกด STOP หรือเข้า Edit Mode ตัวละคร NPC จะหยุดเดินและยืน Standby ทันที",
+				"- กดปุ่ม 'NPCs' ด้านล่างเพื่อเปิด/ปิดรายตัว ปรับความเร็ว ปิดแชท หรือปิดเสียง NPC แยกจากเครื่องจักร",
+			] if th else [
+				"- NPCs automatically avoid props/equipment using A* pathfinding and take brief shift breaks at QC Desk, Production Board, Workbench, or Locker stations.",
+				"- In STOP Mode or Edit Mode, NPCs pause immediately and stand idle.",
+				"- Click 'NPCs' on the bottom bar to toggle roles, walk speed, chat bubbles, or mute NPC sounds separately.",
+			],
+		)
+
+		# Page 5: Ladder Guide (Detailed)
+		var p_ladder := VBoxContainer.new()
+		p_ladder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p_ladder.add_theme_constant_override("separation", 8)
+		p_ladder.visible = false
+		content_root.add_child(p_ladder)
+		pages.append(p_ladder)
+		add_section.call(
+			p_ladder,
+			"1. หลักการทำงานของ PLC (Scan Cycle) & ข้อควรระวัง" if th else "1. PLC Scan Cycle & Best Practices",
+			[
+				"PLC ทำงานวนซ้ำต่อเนื่องเป็นรอบเรียกว่า Scan Cycle ประกอบด้วย 3 ขั้นตอน:",
+				"  ขั้นที่ 1 - อ่านอินพุต (Read Inputs): อ่านค่าเซ็นเซอร์ ปุ่มกด และค่าแอนะล็อกทั้งหมด (X / %IX / IW)",
+				"  ขั้นที่ 2 - ประมวลผลลอจิก (Execute Logic): รันคำสั่งทีละบรรทัดจากบนลงล่างจนถึง END",
+				"  ขั้นที่ 3 - ส่งเอาต์พุต (Write Outputs): อัปเดตคอยล์ มอเตอร์ สายพาน และไฟสถานะ (Y / %QX / QW)",
+				"ข้อควรระวัง (Double Coil): ห้ามใช้คำสั่ง OUT Y0 ซ้ำกัน 2 จุดในโปรแกรมเดียว เพราะบรรทัดล่างจะทับค่าบรรทัดบน ให้รวมเงื่อนไขด้วย OR / M-bit หรือใช้ SET / RST แทน",
+			] if th else [
+				"A PLC executes your program repeatedly in a continuous loop (Scan Cycle):",
+				"  Step 1 - Read Inputs: Snapshots all sensors, buttons, and analog inputs (X / %IX / IW).",
+				"  Step 2 - Execute Logic: Evaluates rungs top-to-bottom from line 1 until END.",
+				"  Step 3 - Write Outputs: Updates all coils, actuators, lamps, and registers (Y / %QX / QW).",
+				"Rule of Thumb: Avoid writing to the same output coil (OUT Y0) twice in one program (Double Coil). Combine conditions with OR/M-bits instead, or use SET / RST.",
+			],
+		)
+		add_section.call(
+			p_ladder,
+			"2. ตารางอ้างอิงแอดเดรส (FX3U vs OpenPLC IEC)" if th else "2. Addressing Reference (FX3U vs OpenPLC IEC)",
+			[
+				"- อินพุตดิจิทัล (DI):   X0..X7, X10.. (ฐาน 8)   |  IEC: %IX0.0 .. %IX0.7, %IX1.0..",
+				"- เอาต์พุตดิจิทัล (DO): Y0..Y7, Y10.. (ฐาน 8)   |  IEC: %QX0.0 .. %QX0.7, %QX1.0..",
+				"- รีเลย์ช่วยภายใน:      M0 .. M255              |  IEC: %MX0.0 .. %MX31.7",
+				"- ตัวตั้งเวลา / ตัวนับ: T0 .. T63 (ฐาน 100ms)   |  C0 .. C63 (นับขึ้น/นับลง)",
+				"- รีจิสเตอร์คำ (Word):  IW0 (Input Reg), QW0 (Holding Reg), D0..D127 (Data), K100 (ค่าคงที่)",
+				"ทิป: ใช้หน้าต่าง 'Modbus' เพื่อผูกเลข Coil/Input/Register ของเครื่องจักรให้ตรงกับแอดเดรสในแลดเดอร์",
+			] if th else [
+				"- Digital Inputs (DI):  X0..X7, X10.. (octal)   |  IEC: %IX0.0 .. %IX0.7, %IX1.0..",
+				"- Digital Outputs (DO): Y0..Y7, Y10.. (octal)   |  IEC: %QX0.0 .. %QX0.7, %QX1.0..",
+				"- Internal Memory Bits: M0 .. M255              |  IEC: %MX0.0 .. %MX31.7",
+				"- Timers & Counters:    T0 .. T63 (100ms base)  |  C0 .. C63 (Up/Down counters)",
+				"- Word / Analog Regs:   IW0 (Input Reg), QW0 (Holding Reg), D0..D127 (Data), K100 (Constant)",
+				"Tip: Use 'Modbus' dialog to map each machine's Coil/Input/Register address to your Ladder tags.",
+			],
+		)
+		add_section.call(
+			p_ladder,
+			"3. คำสั่งทั้งหมดที่ SoftPLC รองรับ (Instruction Set)" if th else "3. Complete Instruction Set (SoftPLC)",
+			[
+				"[Bit Logic]  LD / LDN(LDI) = เริ่มแถว NO/NC  |  LDP / LDF = ตรวจจับขอบขาขึ้น / ขาลง",
+				"             AND / ANDN(ANI) / ANDP / ANDF = ต่ออนุกรม  |  OR / ORN(ORI) / ORP / ORF = ต่อขนาน",
+				"[Branching]  MPS (เก็บค่า) / MRD (อ่านค่า) / MPP (ดึงออก)  |  AND( ... ) / OR( ... ) = วงเล็บกลุ่ม",
+				"[Outputs]    OUT Y0 = สั่งคอยล์ทำงาน  |  SET Y0 / M0 = ค้างสถานะ ON  |  RST Y0 / M0 / T0 / C0 = รีเซ็ต",
+				"[Timers]     TON T0 PT=2000ms หรือ OUT T0 K20 (20 x 100ms = 2.0s)  |  TOF T0 PT=1500ms (หน่วงดับ)",
+				"[Counters]   CTU C0 PV=5 หรือ OUT C0 K5 (นับขึ้น)  |  CTD C0 PV=5 (นับลง)  |  RST C0 (ล้างค่านับ)",
+				"[Compare]    LD= / LD> / LD< / LD>= / LD<= / LD<> (มีแบบ AND/OR ด้วย) เช่น LD>= IW0 K85",
+				"[Data/End]   MOV <src> <dst> (เช่น MOV IW0 QW0 หรือ MOV K100 D0)  |  END = จบรอบสแกน",
+			] if th else [
+				"[Bit Logic]  LD / LDN(LDI) = Start rung NO/NC  |  LDP / LDF = Rising / Falling edge",
+				"             AND / ANDN(ANI) / ANDP / ANDF = Series logic  |  OR / ORN(ORI) / ORP / ORF = Parallel",
+				"[Branching]  MPS (push) / MRD (read) / MPP (pop)  |  AND( ... ) / OR( ... ) = Block grouping",
+				"[Outputs]    OUT Y0 = Energize coil  |  SET Y0 / M0 = Latch ON  |  RST Y0 / M0 / T0 / C0 = Reset",
+				"[Timers]     TON T0 PT=2000ms  or  OUT T0 K20 (20 x 100ms = 2.0s)  |  TOF T0 PT=1500ms (Off-delay)",
+				"[Counters]   CTU C0 PV=5  or  OUT C0 K5 (Count Up)  |  CTD C0 PV=5 (Count Down)  |  RST C0",
+				"[Compare]    LD= / LD> / LD< / LD>= / LD<= / LD<> (also AND>, OR<, etc.) e.g. LD>= IW0 K85",
+				"[Data/End]   MOV <src> <dst> (e.g. MOV IW0 QW0 or MOV K100 D0)  |  END = End of scan",
+			],
+		)
+		var pat_hdr := Label.new()
+		pat_hdr.text = "4. วงจรมาตรฐานพร้อมทดลอง (กด 'โหลดลง Editor' เพื่อทดสอบ)" if th else "4. Standard Ladder Patterns (Click 'Load into Editor' to test)"
+		pat_hdr.add_theme_font_size_override("font_size", 13)
+		pat_hdr.add_theme_color_override("font_color", Color("6ce5ff"))
+		p_ladder.add_child(pat_hdr)
+
+		var ladder_patterns := [
+			[
+				"วงจร Start-Stop แบบล็อกสถานะ (Seal-In Latch)" if th else "Start-Stop Seal-In Latch",
+				"X0=ปุ่ม Start, X1=ปุ่ม Stop, Y0=มอเตอร์/สายพาน (ค้างทำงานจนกว่าจะกด Stop)" if th else "X0=Start (NO), X1=Stop (NC/Press to stop), Y0=Motor/Conveyor",
+				"// Start-Stop Seal-In Latch\nLD X0\nOR Y0\nANI X1\nOUT Y0\nEND\n",
+			],
+			[
+				"วงจรหน่วงเวลาเปิด (On-Delay Timer - 2.0s)" if th else "On-Delay Timer (TON - 2.0s)",
+				"เมื่อ X0 ติดค้างครบ 2.0 วินาที (K20 = 20x100ms) ตัวจับเวลา T0 จะสั่งเปิด Y0" if th else "When X0 stays ON for 2.0s (K20 = 20x100ms), T0 turns ON Y0",
+				"// On-Delay Timer (2.0s)\nLD X0\nOUT T0 K20\nLD T0\nOUT Y0\nEND\n",
+			],
+			[
+				"วงจรนับจำนวนชิ้นงาน (Batch Counter + Reset)" if th else "Batch Counter (Count 5 + Reset)",
+				"นับสัญญาณขาขึ้นที่ X0 ครบ 5 ครั้ง -> เปิด Y1; กด X1 เพื่อรีเซ็ตตัวนับ C0" if th else "Counts 5 rising edges on X0 -> energizes Y1; X1 resets C0",
+				"// Batch Counter (PV=5)\nLDP X0\nOUT C0 K5\nLD C0\nOUT Y1\nLD X1\nRST C0\nEND\n",
+			],
+			[
+				"วงจรคุมระดับน้ำแบบช่วง (Tank Hysteresis)" if th else "Water Tank Hysteresis (Comparator)",
+				"สั่งปั๊ม Y0 ทำงานเมื่อระดับน้ำ IW0 < 30% และหยุดเมื่อ IW0 >= 85%" if th else "Start Pump Y0 when Level IW0 < 30%, stop when IW0 >= 85%",
+				"// Water Tank Hysteresis\nLD< IW0 K30\nSET Y0\nLD>= IW0 K85\nRST Y0\nEND\n",
+			],
+			[
+				"วงจรตรวจจับขอบขาขึ้น (One-Shot Edge Trigger)" if th else "One-Shot Edge Trigger (LDP + SET/RST)",
+				"จับจังหวะกด X0 เพื่อค้าง M0 และจับจังหวะกด X1 เพื่อสั่งรีเซ็ต M0" if th else "Rising edge on X0 latches M0; rising edge on X1 resets M0",
+				"// Edge Trigger Latch\nLDP X0\nSET M0\nLDP X1\nRST M0\nLD M0\nOUT Y0\nEND\n",
+			],
+		]
+		for pat in ladder_patterns:
+			var card := PanelContainer.new()
+			card.add_theme_stylebox_override("panel", _ui_stylebox(Color(0.09, 0.14, 0.2, 0.9), Color("29485f"), 8, 1, 12, 8))
+			p_ladder.add_child(card)
+			var pv := VBoxContainer.new()
+			pv.add_theme_constant_override("separation", 4)
+			card.add_child(pv)
+			var top_r := HBoxContainer.new()
+			top_r.add_theme_constant_override("separation", 8)
+			pv.add_child(top_r)
+			var t_col := VBoxContainer.new()
+			t_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			top_r.add_child(t_col)
+			var p_name := Label.new()
+			p_name.text = str(pat[0])
+			p_name.add_theme_font_size_override("font_size", 12)
+			p_name.add_theme_color_override("font_color", Color("eef7fa"))
+			t_col.add_child(p_name)
+			var p_desc := Label.new()
+			p_desc.text = str(pat[1])
+			p_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			p_desc.add_theme_font_size_override("font_size", 11)
+			p_desc.add_theme_color_override("font_color", Color("9cb3c4"))
+			t_col.add_child(p_desc)
+			var load_pat_btn := Button.new()
+			load_pat_btn.text = "โหลดลง Editor" if th else "Load into Editor"
+			load_pat_btn.custom_minimum_size = Vector2(118, 28)
+			load_pat_btn.add_theme_font_size_override("font_size", 11)
+			_style_accent_button(load_pat_btn, "1e6b45", "278758", "3eb87a")
+			var pat_code := str(pat[2])
+			load_pat_btn.pressed.connect(
+				func():
+					if is_instance_valid(ladder_code_edit):
+						ladder_code_edit.text = pat_code
+						_apply_ladder_code(true)
+					_set_controller_mode(2, true)
+					_set_help_dialog_visible(false)
+					_set_ladder_dialog_visible(true),
+			)
+			top_r.add_child(load_pat_btn)
+			var code_lbl := Label.new()
+			code_lbl.text = str(pat[2]).strip_edges()
+			code_lbl.add_theme_font_size_override("font_size", 11)
+			code_lbl.add_theme_color_override("font_color", Color("8ce8ff"))
+			pv.add_child(code_lbl)
+
+		var tab_names := (
+			["เริ่มต้น", "ควบคุม", "Edit Mode", "PLC & Modbus", "NPC & Props", "คู่มือ Ladder"]
+			if th
+			else ["Quick Start", "Controls", "Edit Mode", "PLC & Modbus", "NPCs & Props", "Ladder Guide"]
+		)
+		for i in range(tab_names.size()):
+			var tbtn := Button.new()
+			tbtn.text = tab_names[i]
+			tbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			tbtn.custom_minimum_size = Vector2(0, 30)
+			tbtn.add_theme_font_size_override("font_size", 11)
+			var tab_i := i
+			tbtn.pressed.connect(func(): select_tab.call(tab_i))
+			tab_bar.add_child(tbtn)
+			tab_btns.append(tbtn)
+		select_tab.call(_help_current_tab)
+
+	_help_rebuild_cb = rebuild_pages
+	en_btn.pressed.connect(
+		func():
+			if guide_lang != "en":
+				guide_lang = "en"
+				rebuild_pages.call()
+				_save_settings(),
+	)
+	th_btn.pressed.connect(
+		func():
+			if guide_lang != "th":
+				guide_lang = "th"
+				rebuild_pages.call()
+				_save_settings(),
+	)
+	rebuild_pages.call()
+
+
 func _build_object_dialog(ui_root: Control) -> void:
 	object_dialog_backdrop = ColorRect.new()
 	object_dialog_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -4487,6 +5086,18 @@ func _build_ladder_dialog(ui_root: Control) -> void:
 			_set_controller_mode(2 if pressed else 0, true),
 	)
 	header.add_child(ladder_enabled_check)
+
+	var manual_btn := Button.new()
+	manual_btn.text = "Manual"
+	manual_btn.tooltip_text = "Open Detailed Ladder PLC Programming Guide"
+	manual_btn.custom_minimum_size = Vector2(68, 28)
+	manual_btn.add_theme_font_size_override("font_size", 11)
+	_style_accent_button(manual_btn, "1b4f6e", "23668f", "3b8cb8")
+	manual_btn.pressed.connect(
+		func():
+			_set_help_dialog_visible(true, 5),
+	)
+	header.add_child(manual_btn)
 
 	var close_btn := Button.new()
 	close_btn.text = "×"
@@ -6437,6 +7048,7 @@ func _save_settings() -> void:
 	cfg.set_value("ui", "npc_inspect_duration", npc_inspect_duration)
 	cfg.set_value("ui", "npc_chat_enabled", npc_chat_enabled)
 	cfg.set_value("ui", "npc_sound_enabled", npc_sound_enabled)
+	cfg.set_value("ui", "guide_lang", guide_lang)
 	cfg.set_value("ui", "sound_enabled", sound_enabled)
 	cfg.set_value("ui", "plc_mode", plc_mode)
 	cfg.set_value("ui", "running", running)
@@ -6584,6 +7196,11 @@ func _load_settings() -> void:
 	npc_sound_enabled = bool(cfg.get_value("ui", "npc_sound_enabled", true))
 	if is_instance_valid(npc_sound_check):
 		npc_sound_check.set_pressed_no_signal(npc_sound_enabled)
+	guide_lang = str(cfg.get_value("ui", "guide_lang", "en"))
+	if guide_lang != "th":
+		guide_lang = "en"
+	if _help_rebuild_cb.is_valid():
+		_help_rebuild_cb.call()
 	_apply_npcs_enabled(saved_npcs)
 	var saved_sound := bool(cfg.get_value("ui", "sound_enabled", true))
 	_apply_sound_enabled(saved_sound)
