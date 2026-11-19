@@ -1,0 +1,16 @@
+# Godot 4 cache & local editor state
+.godot/
+
+# Exported builds & local test artifacts
+build/
+Web/
+
+# Python cache (tools/)
+__pycache__/
+*.pyc
+
+# OS / Editor temp files
+.DS_Store
+Thumbs.db
+*.swp
+*~

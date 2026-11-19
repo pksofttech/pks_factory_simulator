@@ -11,7 +11,20 @@ const BOX_COLORS := [
 	Color("c49bd4"),
 ]
 const PRODUCT_KINDS := ["box", "box_plastic", "box_small", "box_metal", "pallet", "workpiece"]
-const PROP_KINDS := ["prop_rack", "prop_barrier", "prop_barrel", "prop_workbench"]
+const PROP_KINDS := [
+	"prop_rack",
+	"prop_barrier",
+	"prop_barrel",
+	"prop_workbench",
+	"prop_forklift",
+	"prop_pallet_stack",
+	"prop_pallet_jack",
+	"prop_bollard",
+	"prop_safety_sign",
+	"prop_qc_desk",
+	"prop_production_board",
+	"prop_locker",
+]
 const EQUIPMENT_BASE_HEIGHT := {
 	"conveyor": 0.0,
 	"conveyor_short": 0.0,
@@ -35,6 +48,14 @@ const EQUIPMENT_BASE_HEIGHT := {
 	"prop_barrier": 0.0,
 	"prop_barrel": 0.0,
 	"prop_workbench": 0.0,
+	"prop_forklift": 0.0,
+	"prop_pallet_stack": 0.0,
+	"prop_pallet_jack": 0.0,
+	"prop_bollard": 0.0,
+	"prop_safety_sign": 0.0,
+	"prop_qc_desk": 0.0,
+	"prop_production_board": 0.0,
+	"prop_locker": 0.0,
 }
 const GRID_STEP := 0.5
 var grid_step: float = GRID_STEP
@@ -53,6 +74,9 @@ var placement_angle := 0.0
 var placement_reversed := false
 var placement_preview: Node3D
 var preview_material: StandardMaterial3D
+var _right_click_tracking := false
+var _right_click_press_pos := Vector2.ZERO
+var _right_click_moved := false
 var edit_grid: Node3D
 var floor_body: StaticBody3D
 var workspace_width := 40
@@ -126,6 +150,12 @@ var rotation_drag_pixels := 0.0
 var drag_grid_offset := Vector3.ZERO
 var sandbox_label: Label
 const SANDBOX_PATH := "user://sandbox-layout.json"
+const PROJECT_FILE_EXT := "pksfac"
+var current_project_path: String = ""
+var project_file_label: Label
+var project_file_dialog: FileDialog
+var project_file_dialog_mode: String = ""
+var new_project_confirm_dialog: ConfirmationDialog
 var sensor: Area3D
 var sensor_indicator: MeshInstance3D
 var sensor_indicator_material: StandardMaterial3D
@@ -133,6 +163,8 @@ var sensor_bodies: Array[Node3D] = []
 var selected_object: Node3D
 var selection_material: StandardMaterial3D
 var transform_panel: PanelContainer
+var transform_scroll: ScrollContainer
+var transform_column: VBoxContainer
 var transform_title: Label
 var transform_value: Label
 var object_name_input: LineEdit
@@ -163,6 +195,9 @@ var cabinet_selected_row: int = 0
 var cabinet_slot_io_label: Label
 var cabinet_slot_kind: OptionButton
 var cabinet_slot_color: ColorPickerButton
+var cabinet_dpm_row: HBoxContainer
+var cabinet_dpm_unit: LineEdit
+var cabinet_dpm_decimals: OptionButton
 var tank_force_box: VBoxContainer
 var tank_force_sensors_label: Label
 var tank_force_valve_btn: Button
@@ -178,6 +213,7 @@ var cabinet_slot_move_mode: bool = false
 var cabinet_slot_move_btn: Button
 var modbus_section_sep: HSeparator
 var modbus_section_header: Label
+var modbus_slot_io_label: Label
 var modbus_conflict_label: Label
 var modbus_coil_row: HBoxContainer
 var modbus_coil_input: LineEdit
@@ -219,6 +255,18 @@ var modbus_restart_btn: Button
 var modbus_srv_status: Label
 var modbus_io_grid: GridContainer
 var modbus_config_button: Button
+var plc_notation: String = "iec"
+var modbus_profile_option: OptionButton
+var modbus_fx_row: HBoxContainer
+var modbus_fx_coil_off_input: SpinBox
+var modbus_fx_di_off_input: SpinBox
+var modbus_fx_hr_off_input: SpinBox
+var modbus_fx_ir_off_input: SpinBox
+var modbus_unit_id_input: SpinBox
+var modbus_pack_di_check: CheckBox
+var modbus_table_title: Label
+var modbus_auto_map_btn: Button
+var ladder_notation_option: OptionButton
 const SoftPLCScript := preload("res://soft_plc.gd")
 var soft_plc = SoftPLCScript.new()
 var ladder_dialog: PanelContainer
@@ -241,16 +289,22 @@ var npcs_enabled: bool = true
 var npc_operator_enabled: bool = true
 var npc_tester_enabled: bool = true
 var npc_safety_enabled: bool = true
+var npc_maintenance_enabled: bool = true
+var npc_qc_enabled: bool = true
 var npc_walk_speed: float = 1.85
 var npc_inspect_duration: float = 2.2
 var npc_chat_enabled: bool = true
+var npc_sound_enabled: bool = true
 var npc_dialog: PanelContainer
 var npc_dialog_backdrop: ColorRect
 var npc_master_check: CheckBox
 var npc_op_check: CheckBox
 var npc_tester_check: CheckBox
 var npc_safety_check: CheckBox
+var npc_maint_check: CheckBox
+var npc_qc_check: CheckBox
 var npc_chat_check: CheckBox
+var npc_sound_check: CheckBox
 var npc_speed_spin: SpinBox
 var npc_inspect_spin: SpinBox
 var sound_toggle_button: Button
@@ -352,6 +406,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	):
 		_drag_selected_to(event.position)
 	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		if _right_click_tracking and event.position.distance_to(_right_click_press_pos) > 5.0:
+			_right_click_moved = true
 		camera_yaw -= event.relative.x * 0.006
 		camera_pitch = clampf(camera_pitch + event.relative.y * 0.006, 0.12, 1.35)
 		_update_camera()
@@ -374,6 +430,11 @@ func _unhandled_input(event: InputEvent) -> void:
 						_start_rotation_drag()
 					else:
 						_start_object_drag(event.position)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			if edit_mode and get_viewport().gui_get_hovered_control() == null:
+				_right_click_tracking = true
+				_right_click_press_pos = event.position
+				_right_click_moved = false
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			if get_viewport().gui_get_hovered_control() == null:
 				camera_distance = maxf(4.5, camera_distance - 1.0)
@@ -382,6 +443,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			if get_viewport().gui_get_hovered_control() == null:
 				camera_distance = minf(35.0, camera_distance + 1.0)
 				_update_camera()
+	elif (
+		event is InputEventMouseButton
+		and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed
+	):
+		var was_click := _right_click_tracking and not _right_click_moved
+		_right_click_tracking = false
+		_right_click_moved = false
+		if was_click and edit_mode:
+			if placement != "select":
+				_set_placement("select")
+			else:
+				_set_object_dialog_visible(true)
 	elif (
 		event is InputEventMouseButton
 		and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed
@@ -777,6 +850,18 @@ func _build_world() -> void:
 		safety_npc.name = "SafetyNPC"
 		safety_npc.position = Vector3(-6.0, 0.0, -3.0)
 		add_child(safety_npc)
+	var maint_scene := load("res://objects/maintenance_npc.tscn") as PackedScene
+	if maint_scene != null:
+		var maint_npc := maint_scene.instantiate() as Node3D
+		maint_npc.name = "MaintenanceNPC"
+		maint_npc.position = Vector3(2.5, 0.0, 6.0)
+		add_child(maint_npc)
+	var qc_scene := load("res://objects/qc_npc.tscn") as PackedScene
+	if qc_scene != null:
+		var qc_npc := qc_scene.instantiate() as Node3D
+		qc_npc.name = "QCNPC"
+		qc_npc.position = Vector3(8.0, 0.0, 2.0)
+		add_child(qc_npc)
 
 
 func _apply_decor_style(style_id: String) -> void:
@@ -877,36 +962,6 @@ func _build_factory_decor() -> void:
 			Vector3(0.0, -0.052, float(gz)),
 			mat_joint,
 		)
-
-	# Safety perimeter lines around the main production zone
-	var zone_w := minf(float(workspace_width) - 2.0, 14.5)
-	var zone_d := minf(float(workspace_depth) - 2.0, 11.0)
-	var zx := 1.0
-	var zz := 2.4
-	add_box.call(
-		decor,
-		Vector3(zone_w, 0.006, 0.1),
-		Vector3(zx, -0.049, zz - zone_d * 0.5),
-		mat_line,
-	)
-	add_box.call(
-		decor,
-		Vector3(zone_w, 0.006, 0.1),
-		Vector3(zx, -0.049, zz + zone_d * 0.5),
-		mat_line,
-	)
-	add_box.call(
-		decor,
-		Vector3(0.1, 0.006, zone_d),
-		Vector3(zx - zone_w * 0.5, -0.049, zz),
-		mat_line,
-	)
-	add_box.call(
-		decor,
-		Vector3(0.1, 0.006, zone_d),
-		Vector3(zx + zone_w * 0.5, -0.049, zz),
-		mat_line,
-	)
 
 	match border_mode:
 		"fence":
@@ -1388,6 +1443,61 @@ func _build_ui() -> void:
 
 	toolbar.add_child(_make_ui_divider())
 
+	var new_proj_btn := Button.new()
+	new_proj_btn.text = "New"
+	new_proj_btn.icon = _make_svg_icon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>')
+	new_proj_btn.custom_minimum_size = Vector2(62, 26)
+	new_proj_btn.add_theme_font_size_override("font_size", 11)
+	new_proj_btn.tooltip_text = "Create a new blank factory project"
+	new_proj_btn.pressed.connect(_on_new_project_pressed)
+	toolbar.add_child(new_proj_btn)
+
+	var open_proj_btn := Button.new()
+	open_proj_btn.text = "Open"
+	open_proj_btn.icon = _make_svg_icon('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>')
+	open_proj_btn.custom_minimum_size = Vector2(68, 26)
+	open_proj_btn.add_theme_font_size_override("font_size", 11)
+	open_proj_btn.tooltip_text = "Open a saved .pksfac factory project file"
+	open_proj_btn.pressed.connect(_on_open_project_pressed)
+	toolbar.add_child(open_proj_btn)
+
+	var save_proj_btn := Button.new()
+	save_proj_btn.text = "Save"
+	save_proj_btn.icon = _make_svg_icon('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>')
+	save_proj_btn.custom_minimum_size = Vector2(64, 26)
+	save_proj_btn.add_theme_font_size_override("font_size", 11)
+	save_proj_btn.tooltip_text = "Save current factory project (.pksfac)"
+	save_proj_btn.pressed.connect(_on_save_project_pressed)
+	toolbar.add_child(save_proj_btn)
+
+	var save_as_proj_btn := Button.new()
+	save_as_proj_btn.text = "Save As"
+	save_as_proj_btn.custom_minimum_size = Vector2(68, 26)
+	save_as_proj_btn.add_theme_font_size_override("font_size", 11)
+	save_as_proj_btn.tooltip_text = "Save factory project to a new .pksfac file"
+	save_as_proj_btn.pressed.connect(_on_save_project_as_pressed)
+	toolbar.add_child(save_as_proj_btn)
+
+	project_file_label = _make_status_pill(toolbar, "Unsaved", Color("9cb6c9"))
+	project_file_label.add_theme_font_size_override("font_size", 11)
+	project_file_label.tooltip_text = "Current project file"
+
+	project_file_dialog = FileDialog.new()
+	project_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	project_file_dialog.use_native_dialog = true
+	project_file_dialog.filters = PackedStringArray(["*.pksfac ; PKS Factory Project"])
+	project_file_dialog.file_selected.connect(_on_project_file_selected)
+	ui_root.add_child(project_file_dialog)
+
+	new_project_confirm_dialog = ConfirmationDialog.new()
+	new_project_confirm_dialog.title = "New Factory Project"
+	new_project_confirm_dialog.dialog_text = "Create a new blank project? Unsaved changes to the current sandbox will be lost."
+	new_project_confirm_dialog.ok_button_text = "New Project"
+	new_project_confirm_dialog.confirmed.connect(_create_new_project)
+	ui_root.add_child(new_project_confirm_dialog)
+
+	toolbar.add_child(_make_ui_divider())
+
 	modbus_config_button = Button.new()
 	modbus_config_button.text = "Modbus"
 	modbus_config_button.icon = _make_svg_icon('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>')
@@ -1430,45 +1540,10 @@ func _build_ui() -> void:
 	)
 	toolbar.add_child(plc_controller_option)
 
-	status_toggle_button = Button.new()
-	status_toggle_button.text = "Status"
-	status_toggle_button.icon = _make_svg_icon('<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>')
-	status_toggle_button.custom_minimum_size = Vector2(74, 26)
-	status_toggle_button.add_theme_font_size_override("font_size", 11)
-	status_toggle_button.tooltip_text = "Show or hide OBJECT STATUS panel"
-	_style_accent_button(status_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-	status_toggle_button.pressed.connect(_toggle_io_status_panel)
-	toolbar.add_child(status_toggle_button)
-
-	npc_toggle_button = Button.new()
-	npc_toggle_button.text = "NPCs"
-	npc_toggle_button.icon = _make_svg_icon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>')
-	npc_toggle_button.custom_minimum_size = Vector2(68, 26)
-	npc_toggle_button.add_theme_font_size_override("font_size", 11)
-	npc_toggle_button.tooltip_text = "Configure Factory NPCs"
-	_style_accent_button(npc_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-	npc_toggle_button.pressed.connect(
-		func():
-			_set_npc_dialog_visible(
-				not npc_dialog.visible if is_instance_valid(npc_dialog) else true
-			),
-	)
-	toolbar.add_child(npc_toggle_button)
-
 	var toolbar_spacer := Control.new()
 	toolbar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	toolbar_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toolbar.add_child(toolbar_spacer)
-
-	sound_toggle_button = Button.new()
-	sound_toggle_button.text = ""
-	sound_toggle_button.icon = _make_svg_icon('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>')
-	sound_toggle_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sound_toggle_button.custom_minimum_size = Vector2(32, 26)
-	sound_toggle_button.tooltip_text = "Mute or unmute factory machine audio"
-	_style_accent_button(sound_toggle_button, "1b4f6e", "23668f", "3b8cb8")
-	sound_toggle_button.pressed.connect(_toggle_sound)
-	toolbar.add_child(sound_toggle_button)
 
 	# Row 2: Placement, Transform, Layout & Workspace Tools (shown only in Edit Mode)
 	edit_tools_row = HFlowContainer.new()
@@ -1561,18 +1636,58 @@ func _build_ui() -> void:
 	)
 	edit_tools_row.add_child(floor_dialog_button)
 
-	# Bottom-left keyboard shortcut hint pill
+	# Bottom-left sound toggle + keyboard shortcut hint pill
+	var bottom_left_bar := HBoxContainer.new()
+	bottom_left_bar.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	bottom_left_bar.offset_left = 14
+	bottom_left_bar.offset_top = -42
+	bottom_left_bar.offset_bottom = -12
+	bottom_left_bar.add_theme_constant_override("separation", 8)
+	bottom_left_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_root.add_child(bottom_left_bar)
+
+	sound_toggle_button = Button.new()
+	sound_toggle_button.text = ""
+	sound_toggle_button.icon = _make_svg_icon('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>')
+	sound_toggle_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sound_toggle_button.custom_minimum_size = Vector2(34, 30)
+	sound_toggle_button.tooltip_text = "Mute or unmute factory machine audio"
+	_style_accent_button(sound_toggle_button, "1b4f6e", "23668f", "3b8cb8")
+	sound_toggle_button.pressed.connect(_toggle_sound)
+	bottom_left_bar.add_child(sound_toggle_button)
+
+	status_toggle_button = Button.new()
+	status_toggle_button.text = "Status"
+	status_toggle_button.icon = _make_svg_icon('<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>')
+	status_toggle_button.custom_minimum_size = Vector2(74, 30)
+	status_toggle_button.add_theme_font_size_override("font_size", 11)
+	status_toggle_button.tooltip_text = "Show or hide OBJECT STATUS panel"
+	_style_accent_button(status_toggle_button, "1b4f6e", "23668f", "3b8cb8")
+	status_toggle_button.pressed.connect(_toggle_io_status_panel)
+	bottom_left_bar.add_child(status_toggle_button)
+
+	npc_toggle_button = Button.new()
+	npc_toggle_button.text = "NPCs"
+	npc_toggle_button.icon = _make_svg_icon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>')
+	npc_toggle_button.custom_minimum_size = Vector2(68, 30)
+	npc_toggle_button.add_theme_font_size_override("font_size", 11)
+	npc_toggle_button.tooltip_text = "Configure Factory NPCs"
+	_style_accent_button(npc_toggle_button, "1b4f6e", "23668f", "3b8cb8")
+	npc_toggle_button.pressed.connect(
+		func():
+			_set_npc_dialog_visible(
+				not npc_dialog.visible if is_instance_valid(npc_dialog) else true
+			),
+	)
+	bottom_left_bar.add_child(npc_toggle_button)
+
 	var info_pill := PanelContainer.new()
-	info_pill.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	info_pill.offset_left = 14
-	info_pill.offset_top = -42
-	info_pill.offset_bottom = -12
 	info_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_pill.add_theme_stylebox_override(
 		"panel",
 		_ui_stylebox(Color(0.063, 0.098, 0.137, 0.82), Color("233747"), 8, 1, 12, 4),
 	)
-	ui_root.add_child(info_pill)
+	bottom_left_bar.add_child(info_pill)
 
 	var info := Label.new()
 	info.text = "X/Y: floor  |  Z: PgUp/PgDn  |  Drag: move  |  Shift+Drag: rotate Z  |  Q/E: rotate  |  Esc: cancel"
@@ -1715,14 +1830,19 @@ func _apply_npc_settings() -> void:
 			individual = npc_tester_enabled
 		elif npc.name == "SafetyNPC":
 			individual = npc_safety_enabled
+		elif npc.name == "MaintenanceNPC":
+			individual = npc_maintenance_enabled
+		elif npc.name == "QCNPC":
+			individual = npc_qc_enabled
 		var active := npcs_enabled and individual
 		(npc as Node3D).visible = active
 		npc.set_physics_process(active)
 		npc.set("walk_speed", npc_walk_speed)
 		npc.set("inspect_duration", npc_inspect_duration)
 		npc.set("chat_enabled", npc_chat_enabled)
+		npc.set("sound_enabled", npc_sound_enabled)
 	if is_instance_valid(npc_toggle_button):
-		var any_on := npcs_enabled and (npc_operator_enabled or npc_tester_enabled or npc_safety_enabled)
+		var any_on := npcs_enabled and (npc_operator_enabled or npc_tester_enabled or npc_safety_enabled or npc_maintenance_enabled or npc_qc_enabled)
 		npc_toggle_button.text = "NPCs"
 		if any_on:
 			_style_accent_button(npc_toggle_button, "1b4f6e", "23668f", "3b8cb8")
@@ -1738,6 +1858,8 @@ func _reset_npc_positions() -> void:
 		"OperatorNPC": Vector3(-2.0, 0.0, 2.2),
 		"TesterNPC": Vector3(6.5, 0.0, -2.5),
 		"SafetyNPC": Vector3(-6.0, 0.0, -3.0),
+		"MaintenanceNPC": Vector3(2.5, 0.0, 6.0),
+		"QCNPC": Vector3(8.0, 0.0, 2.0),
 	}
 	for npc in get_tree().get_nodes_in_group("factory_npcs"):
 		if is_instance_valid(npc) and npc is Node3D and spawn_map.has(npc.name):
@@ -1811,6 +1933,8 @@ func _selected_cabinet_slot_kind_str() -> String:
 			return "switch_3pos"
 		4:
 			return "potentiometer"
+		5:
+			return "dpm"
 		_:
 			return "lamp"
 
@@ -1843,6 +1967,8 @@ func _on_cabinet_grid_cell_pressed(col: int, row: int) -> void:
 						cabinet_slot_kind.select(3)
 					elif k == "potentiometer":
 						cabinet_slot_kind.select(4)
+					elif k == "dpm":
+						cabinet_slot_kind.select(5)
 					else:
 						cabinet_slot_kind.select(0)
 				if is_instance_valid(cabinet_slot_color):
@@ -1850,8 +1976,12 @@ func _on_cabinet_grid_cell_pressed(col: int, row: int) -> void:
 					cabinet_slot_color.color = raw_c if raw_c is Color else Color(str(raw_c))
 				if is_instance_valid(cabinet_slot_label):
 					cabinet_slot_label.text = str(item.get("label", "AUX1"))
+				if is_instance_valid(cabinet_dpm_unit):
+					cabinet_dpm_unit.text = str(item.get("unit", ""))
+				if is_instance_valid(cabinet_dpm_decimals):
+					cabinet_dpm_decimals.select(clampi(int(item.get("decimals", 0)), 0, 2))
 				break
-	_refresh_cabinet_slot_grid()
+	_refresh_transform_controls()
 
 func _on_live_edit_cabinet_slot() -> void:
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
@@ -1861,12 +1991,16 @@ func _on_live_edit_cabinet_slot() -> void:
 		"color": cabinet_slot_color.color if is_instance_valid(cabinet_slot_color) else Color("18d97c"),
 		"label": cabinet_slot_label.text.strip_edges() if is_instance_valid(cabinet_slot_label) else "MOD",
 	}
+	if str(props["kind"]) == "dpm":
+		props["unit"] = cabinet_dpm_unit.text.strip_edges() if is_instance_valid(cabinet_dpm_unit) else ""
+		props["decimals"] = clampi(cabinet_dpm_decimals.selected, 0, 2) if is_instance_valid(cabinet_dpm_decimals) else 0
+		props["signed"] = true
 	if bool(selected_object.call("update_slot_module", cabinet_selected_col, cabinet_selected_row, props)):
 		_sync_2d_cabinet_customization(selected_object)
 		_refresh_transform_controls()
 		_save_settings()
 	else:
-		_refresh_cabinet_slot_io_preview()
+		_refresh_transform_controls()
 
 func _get_builtin_slot_label(cab: Node3D, col: int, row: int) -> String:
 	if not bool(cab.get("show_builtin_items")):
@@ -1893,7 +2027,7 @@ func _get_builtin_slot_label(cab: Node3D, col: int, row: int) -> String:
 	return ""
 
 func _refresh_cabinet_slot_grid() -> void:
-	if cabinet_slot_buttons.size() != 12:
+	if cabinet_slot_buttons.size() != 15:
 		return
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
 		return
@@ -1902,7 +2036,7 @@ func _refresh_cabinet_slot_grid() -> void:
 	for item in dyn_slots:
 		if item is Dictionary:
 			dyn_map["%d_%d" % [int(item.get("col", 0)), int(item.get("row", 0))]] = item
-	for r_i in range(4):
+	for r_i in range(5):
 		for c_i in range(3):
 			var btn := cabinet_slot_buttons[r_i * 3 + c_i]
 			var key := "%d_%d" % [c_i, r_i]
@@ -1915,7 +2049,7 @@ func _refresh_cabinet_slot_grid() -> void:
 			elif dyn_map.has(key):
 				var mod: Dictionary = dyn_map[key]
 				var mkind := str(mod.get("kind", ""))
-				var icon := "■" if mkind in ["push_button", "button"] else ("◈" if mkind == "switch_select" else ("❖" if mkind == "switch_3pos" else ("◎" if mkind == "potentiometer" else "●")))
+				var icon := "■" if mkind in ["push_button", "button"] else ("◈" if mkind == "switch_select" else ("❖" if mkind == "switch_3pos" else ("◎" if mkind == "potentiometer" else ("▥" if mkind == "dpm" else "●"))))
 				var lbl := str(mod.get("label", "MOD")).substr(0, 5)
 				btn.text = ("[%s %s]" % [icon, lbl]) if is_sel else ("%s %s" % [icon, lbl])
 				btn.disabled = false
@@ -1942,6 +2076,26 @@ func _on_toggle_cabinet_slot_move() -> void:
 	cabinet_slot_move_mode = not cabinet_slot_move_mode
 	_refresh_cabinet_slot_grid()
 
+func _get_selected_cabinet_slot_item() -> Dictionary:
+	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
+		return {}
+	var dyn_slots: Array = selected_object.get("dynamic_slots") if "dynamic_slots" in selected_object else []
+	for item in dyn_slots:
+		if item is Dictionary and int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
+			return item
+	return {}
+
+
+func _cabinet_slot_modbus_key(mkind: String) -> String:
+	if mkind == "potentiometer":
+		return "modbus_input_reg"
+	if mkind == "dpm":
+		return "modbus_holding_reg"
+	if mkind in ["push_button", "button", "switch_select", "switch_3pos"]:
+		return "modbus_input"
+	return "modbus_coil"
+
+
 func _refresh_cabinet_slot_io_preview() -> void:
 	if not is_instance_valid(cabinet_slot_io_label):
 		return
@@ -1950,43 +2104,35 @@ func _refresh_cabinet_slot_io_preview() -> void:
 	if cabinet_slot_move_mode:
 		cabinet_slot_io_label.text = "Move (%d,%d) -> Click target slot" % [cabinet_selected_col, cabinet_selected_row]
 		return
-	var kind := _selected_cabinet_slot_kind_str()
-	var is_pot := kind == "potentiometer"
-	var is_input := kind in ["push_button", "button", "switch_select", "switch_3pos"]
-	var dyn_slots: Array = selected_object.get("dynamic_slots") if "dynamic_slots" in selected_object else []
-	var idx := 0
-	var found := false
-	for item in dyn_slots:
-		if item is Dictionary:
-			var mk := str(item.get("kind", ""))
-			if is_pot:
-				if mk == "potentiometer":
-					if int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
-						found = true
-						break
-					idx += 1
-			else:
-				var item_is_input := mk in ["push_button", "button", "switch_select", "switch_3pos"]
-				if item_is_input == is_input and mk != "potentiometer":
-					if int(item.get("col", -1)) == cabinet_selected_col and int(item.get("row", -1)) == cabinet_selected_row:
-						found = true
-						break
-					idx += 2 if mk == "switch_3pos" else 1
+	var slot_item := _get_selected_cabinet_slot_item()
 	var addr_str := "Unassigned"
-	if is_pot:
-		var ir_addr := int(selected_object.get_meta("modbus_input_reg", -1))
-		if ir_addr >= 0:
-			addr_str = _format_word_address(ir_addr + idx, "IW")
-	else:
-		var base_addr := int(selected_object.get_meta("modbus_input" if is_input else "modbus_coil", -1))
-		var iec_prefix := "IX" if is_input else "QX"
-		if base_addr >= 0:
-			if kind == "switch_3pos":
-				addr_str = "%s / %s" % [_format_iec_address(base_addr + 3 + idx, "IX"), _format_iec_address(base_addr + 4 + idx, "IX")]
-			else:
-				addr_str = _format_iec_address(base_addr + 3 + idx, iec_prefix)
-	var state_tag := "(Placed)" if found else "(Next)"
-	cabinet_slot_io_label.text = "Slot (%d,%d) %s -> %s" % [cabinet_selected_col, cabinet_selected_row, state_tag, addr_str]
+	if not slot_item.is_empty():
+		var mkind := str(slot_item.get("kind", "lamp"))
+		if mkind == "potentiometer":
+			var ir_addr := int(slot_item.get("modbus_input_reg", -1))
+			if ir_addr >= 0:
+				addr_str = _format_word_address(ir_addr, "IW")
+		elif mkind == "dpm":
+			var hr_addr := int(slot_item.get("modbus_holding_reg", -1))
+			if hr_addr >= 0:
+				addr_str = _format_word_address(hr_addr, "QW")
+		elif mkind == "switch_3pos":
+			var base_in := int(slot_item.get("modbus_input", -1))
+			if base_in >= 0:
+				addr_str = "%s / %s" % [_format_iec_address(base_in, "IX"), _format_iec_address(base_in + 1, "IX")]
+		elif mkind in ["push_button", "button", "switch_select"]:
+			var in_addr := int(slot_item.get("modbus_input", -1))
+			if in_addr >= 0:
+				addr_str = _format_iec_address(in_addr, "IX")
+		else:
+			var c_addr := int(slot_item.get("modbus_coil", -1))
+			if c_addr >= 0:
+				addr_str = _format_iec_address(c_addr, "QX")
+	var state_tag := "(%s)" % str(slot_item.get("label", "Placed")) if not slot_item.is_empty() else "(Empty)"
+	var slot_txt := "Slot (%d,%d) %s -> %s" % [cabinet_selected_col, cabinet_selected_row, state_tag, addr_str]
+	cabinet_slot_io_label.text = slot_txt
+	if is_instance_valid(modbus_slot_io_label):
+		modbus_slot_io_label.text = slot_txt
 
 func _on_apply_cabinet_slot() -> void:
 	if not is_instance_valid(selected_object) or str(selected_object.get_meta("kind", "")) != "cabinet":
@@ -2001,8 +2147,17 @@ func _on_apply_cabinet_slot() -> void:
 	var color: Color = cabinet_slot_color.color if is_instance_valid(cabinet_slot_color) else Color("18d97c")
 	var lbl := cabinet_slot_label.text.strip_edges()
 	if lbl.is_empty():
-		lbl = "BTN" if kind == "push_button" else ("SW" if kind == "switch_select" else ("SW3" if kind == "switch_3pos" else ("VR1" if kind == "potentiometer" else "LAMP")))
+		lbl = "BTN" if kind == "push_button" else ("SW" if kind == "switch_select" else ("SW3" if kind == "switch_3pos" else ("VR1" if kind == "potentiometer" else ("DPM1" if kind == "dpm" else "LAMP"))))
 	selected_object.call("set_slot_module", col, row, kind, lbl, color)
+	if kind == "dpm":
+		selected_object.call("update_slot_module", col, row, {
+			"kind": "dpm",
+			"label": lbl,
+			"color": color,
+			"unit": cabinet_dpm_unit.text.strip_edges() if is_instance_valid(cabinet_dpm_unit) else "",
+			"decimals": clampi(cabinet_dpm_decimals.selected, 0, 2) if is_instance_valid(cabinet_dpm_decimals) else 0,
+			"signed": true,
+		})
 	_sync_2d_cabinet_customization(selected_object)
 	_refresh_transform_controls()
 	_save_settings()
@@ -2144,16 +2299,14 @@ func _refresh_cabinet_hud() -> void:
 				cab.set("active", running)
 			cabinet_layer.set("lamp_green_on", running)
 			cabinet_layer.set("lamp_red_on", bool(cab.get("estop_active")))
-		var c_addr := int(cab.get_meta("modbus_coil", -1))
 		var dyn_slots: Array = cab.get("dynamic_slots") if "dynamic_slots" in cab else []
-		var dyn_out_idx := 0
 		for slot_item in dyn_slots:
 			if slot_item is Dictionary and str(slot_item.get("kind", "")) == "lamp":
 				var slot_io := str(slot_item.get("io_id", ""))
-				var lit := ModbusTCP.get_coil(c_addr + 3 + dyn_out_idx) if c_addr >= 0 else false
+				var slot_c := int(slot_item.get("modbus_coil", -1))
+				var lit := ModbusTCP.get_coil(slot_c) if slot_c >= 0 else false
 				if is_instance_valid(c3d):
 					c3d.call("set_dynamic_lamp", slot_io, lit)
-				dyn_out_idx += 1
 	cabinet_layer.call("update_display", running, plc_mode, detected_count, spd, hr0, false)
 
 
@@ -2292,10 +2445,6 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 	var dyn_slots: Array = cab.get("dynamic_slots") if "dynamic_slots" in cab else []
 	var dyn_btn_states: Dictionary = cab.get("dynamic_button_states") if "dynamic_button_states" in cab else {}
 	var dyn_pot_values: Dictionary = cab.get("dynamic_pot_values") if "dynamic_pot_values" in cab else {}
-	var ir_addr := int(cab.get_meta("modbus_input_reg", -1))
-	var dyn_in_idx := 0
-	var dyn_out_idx := 0
-	var dyn_ir_idx := 0
 	for slot_item in dyn_slots:
 		if not (slot_item is Dictionary):
 			continue
@@ -2304,10 +2453,11 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 		var lbl := str(slot_item.get("label", "MOD"))
 		if mkind == "potentiometer":
 			var p_val := clampf(float(dyn_pot_values.get(io_id, slot_item.get("value", 0.0))), 0.0, 1.0)
-			var cur_ir := ir_addr + dyn_ir_idx if ir_addr >= 0 else -1
+			var cur_ir := int(slot_item.get("modbus_input_reg", -1))
 			items.append({
 				"key": "dyn_" + io_id,
 				"label": "◎ " + lbl,
+				"kind": mkind,
 				"dir": "input_reg",
 				"addr": cur_ir,
 				"addr_text": _format_word_address(cur_ir, "IW") if cur_ir >= 0 else "-",
@@ -2315,48 +2465,70 @@ func _collect_cabinet_status_items(cab: Node3D) -> Array[Dictionary]:
 				"active": p_val > 0.0,
 				"forced": false,
 			})
-			dyn_ir_idx += 1
+		elif mkind == "dpm":
+			var raw_v := int(slot_item.get("raw_value", 0))
+			var signed_v := raw_v - 65536 if (bool(slot_item.get("signed", true)) and raw_v >= 32768) else raw_v
+			var dec := clampi(int(slot_item.get("decimals", 0)), 0, 2)
+			var disp := ("%d" % signed_v) if dec <= 0 else (("%." + str(dec) + "f") % (float(signed_v) / pow(10.0, float(dec))))
+			var u := str(slot_item.get("unit", "")).strip_edges()
+			if not u.is_empty():
+				disp += " " + u
+			var cur_hr := int(slot_item.get("modbus_holding_reg", -1))
+			items.append({
+				"key": "dyn_" + io_id,
+				"label": "▥ " + lbl,
+				"kind": mkind,
+				"dir": "holding_reg",
+				"addr": cur_hr,
+				"addr_text": _format_word_address(cur_hr, "QW") if cur_hr >= 0 else "-",
+				"status_text": disp,
+				"active": signed_v != 0,
+				"forced": false,
+			})
 		elif mkind == "switch_3pos":
 			var pos := int(dyn_btn_states.get(io_id, 1))
 			var pos_names := ["LEFT", "CENTER", "RIGHT"]
+			var cur_in := int(slot_item.get("modbus_input", -1))
 			var addr_txt := "-"
-			if i_addr >= 0:
-				addr_txt = "%s/%s" % [_format_iec_address(i_addr + 3 + dyn_in_idx, "IX"), _format_iec_address(i_addr + 4 + dyn_in_idx, "IX")]
+			if cur_in >= 0:
+				addr_txt = "%s/%s" % [_format_iec_address(cur_in, "IX"), _format_iec_address(cur_in + 1, "IX")]
 			items.append({
 				"key": "dyn_" + io_id,
 				"label": "❖ " + lbl,
+				"kind": mkind,
 				"dir": "input",
-				"addr": i_addr + 3 + dyn_in_idx if i_addr >= 0 else -1,
+				"addr": cur_in,
 				"addr_text": addr_txt,
 				"status_text": pos_names[clampi(pos, 0, 2)],
 				"active": pos != 1,
 				"forced": false,
 			})
-			dyn_in_idx += 2
 		elif mkind in ["push_button", "button", "switch_select"]:
 			var icon := "◈ " if mkind == "switch_select" else "■ "
+			var cur_in := int(slot_item.get("modbus_input", -1))
 			items.append({
 				"key": "dyn_" + io_id,
 				"label": icon + lbl,
+				"kind": mkind,
 				"dir": "input",
-				"addr": i_addr + 3 + dyn_in_idx if i_addr >= 0 else -1,
+				"addr": cur_in,
 				"active": bool(dyn_btn_states.get(io_id, false)),
 				"forced": false,
 			})
-			dyn_in_idx += 1
 		else:
 			var lamp_key := "dyn_" + io_id
 			var l_forced := forced_map.has(lamp_key)
-			var lamp_on := bool(forced_map[lamp_key]) if l_forced else (ModbusTCP.get_coil(c_addr + 3 + dyn_out_idx) if c_addr >= 0 else false)
+			var cur_coil := int(slot_item.get("modbus_coil", -1))
+			var lamp_on := bool(forced_map[lamp_key]) if l_forced else (ModbusTCP.get_coil(cur_coil) if cur_coil >= 0 else false)
 			items.append({
 				"key": lamp_key,
 				"label": "● " + lbl,
+				"kind": mkind,
 				"dir": "coil",
-				"addr": c_addr + 3 + dyn_out_idx if c_addr >= 0 else -1,
+				"addr": cur_coil,
 				"active": lamp_on,
 				"forced": l_forced,
 			})
-			dyn_out_idx += 1
 	return items
 
 
@@ -2575,6 +2747,9 @@ func _refresh_io_status_list() -> void:
 				next_in_txt,
 				Color("f0c44d") if (i_addr >= 0 or ir_addr >= 0) else Color("687c8c"),
 			)
+		elif kind == "cabinet":
+			_set_label_if_changed(coil_lbl, "-", Color("687c8c"))
+			_set_label_if_changed(input_lbl, "-", Color("687c8c"))
 		else:
 			_set_label_if_changed(
 				coil_lbl,
@@ -3504,6 +3679,32 @@ func _build_npc_dialog(ui_root: Control) -> void:
 	)
 	role_row.add_child(npc_safety_check)
 
+	var role_row2 := HBoxContainer.new()
+	role_row2.add_theme_constant_override("separation", 8)
+	vbox.add_child(role_row2)
+	npc_maint_check = CheckBox.new()
+	npc_maint_check.text = "Maintenance"
+	npc_maint_check.button_pressed = npc_maintenance_enabled
+	npc_maint_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_maint_check.toggled.connect(
+		func(on: bool):
+			npc_maintenance_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	role_row2.add_child(npc_maint_check)
+	npc_qc_check = CheckBox.new()
+	npc_qc_check.text = "QC Inspector"
+	npc_qc_check.button_pressed = npc_qc_enabled
+	npc_qc_check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	npc_qc_check.toggled.connect(
+		func(on: bool):
+			npc_qc_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	role_row2.add_child(npc_qc_check)
+
 	vbox.add_child(HSeparator.new())
 
 	var spd_row := HBoxContainer.new()
@@ -3561,6 +3762,17 @@ func _build_npc_dialog(ui_root: Control) -> void:
 	)
 	vbox.add_child(npc_chat_check)
 
+	npc_sound_check = CheckBox.new()
+	npc_sound_check.text = "NPC Sounds"
+	npc_sound_check.button_pressed = npc_sound_enabled
+	npc_sound_check.toggled.connect(
+		func(on: bool):
+			npc_sound_enabled = on
+			_apply_npc_settings()
+			_save_settings(),
+	)
+	vbox.add_child(npc_sound_check)
+
 	var reset_btn := Button.new()
 	reset_btn.text = "Reset NPC Positions"
 	_style_accent_button(reset_btn, "1b4f6e", "23668f", "3b8cb8")
@@ -3616,16 +3828,6 @@ func _build_object_dialog(ui_root: Control) -> void:
 	heading.add_theme_font_size_override("font_size", 15)
 	heading.add_theme_color_override("font_color", Color("eef7fa"))
 	header.add_child(heading)
-
-	modbus_enabled_check = CheckBox.new()
-	modbus_enabled_check.text = "Enable Modbus"
-	modbus_enabled_check.tooltip_text = "Enable external Modbus TCP (automatically disables Internal Ladder PLC)"
-	modbus_enabled_check.button_pressed = ModbusTCP.enabled
-	modbus_enabled_check.toggled.connect(
-		func(pressed: bool):
-			_set_controller_mode(1 if pressed else 0, true),
-	)
-	header.add_child(modbus_enabled_check)
 
 	var close_btn := Button.new()
 	close_btn.text = "✕"
@@ -3708,6 +3910,14 @@ func _build_object_dialog(ui_root: Control) -> void:
 				["Safety Barrier", "Yellow industrial guardrail", "prop_barrier"],
 				["Steel Drum", "Industrial storage barrel", "prop_barrel"],
 				["Workbench", "Steel frame shop table", "prop_workbench"],
+				["Forklift", "Warehouse counterbalance forklift", "prop_forklift"],
+				["Pallet Stack", "Stacked Euro pallets & cartons", "prop_pallet_stack"],
+				["Pallet Jack", "Manual hydraulic pallet truck", "prop_pallet_jack"],
+				["Safety Bollard", "Yellow-black steel corner post", "prop_bollard"],
+				["Safety Sign", "A-frame caution floor stand", "prop_safety_sign"],
+				["QC Desk", "Inspection table with monitor", "prop_qc_desk"],
+				["Production Board", "KPI whiteboard on rolling stand", "prop_production_board"],
+				["Locker Station", "3-bay PPE & staff locker", "prop_locker"],
 			],
 		],
 	]
@@ -3820,6 +4030,7 @@ func _set_modbus_dialog_visible(visible_state: bool) -> void:
 	else:
 		_save_settings()
 		_refresh_io_status_list()
+		_refresh_transform_controls()
 	if is_instance_valid(modbus_dialog_backdrop):
 		modbus_dialog_backdrop.visible = visible_state
 	if is_instance_valid(modbus_dialog):
@@ -3958,11 +4169,85 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	modbus_srv_status.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(modbus_srv_status)
 
-	var table_title := Label.new()
-	table_title.text = "OBJECT I/O ADDRESSES (IEC 61131-3: %QX / %IX or 0..255; empty = unused)"
-	table_title.add_theme_font_size_override("font_size", 11)
-	table_title.add_theme_color_override("font_color", Color("7ea7c2"))
-	vbox.add_child(table_title)
+	var profile_row := HBoxContainer.new()
+	profile_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(profile_row)
+
+	var prof_lbl := Label.new()
+	prof_lbl.text = "PLC Profile:"
+	profile_row.add_child(prof_lbl)
+
+	modbus_profile_option = OptionButton.new()
+	modbus_profile_option.add_item("OpenPLC (IEC %IX/%QX)", 0)
+	modbus_profile_option.add_item("Mitsubishi FX3U (X/Y Octal, D)", 1)
+	modbus_profile_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	modbus_profile_option.item_selected.connect(
+		func(idx: int):
+			_set_plc_notation("fx3u" if idx == 1 else "iec", true),
+	)
+	profile_row.add_child(modbus_profile_option)
+
+	var uid_lbl := Label.new()
+	uid_lbl.text = "Unit ID:"
+	profile_row.add_child(uid_lbl)
+
+	modbus_unit_id_input = SpinBox.new()
+	modbus_unit_id_input.min_value = 0
+	modbus_unit_id_input.max_value = 247
+	modbus_unit_id_input.step = 1
+	modbus_unit_id_input.custom_minimum_size.x = 72
+	modbus_unit_id_input.tooltip_text = "Server: 0 = any Unit ID | Client: Target Slave ID (1..247)"
+	profile_row.add_child(modbus_unit_id_input)
+
+	modbus_pack_di_check = CheckBox.new()
+	modbus_pack_di_check.text = "Pack DI->HR"
+	modbus_pack_di_check.tooltip_text = "Client mode: pack DI 0..63 into Holding Registers 0..3 (OpenPLC)"
+	modbus_pack_di_check.button_pressed = ModbusTCP.client_packed_di
+	profile_row.add_child(modbus_pack_di_check)
+
+	modbus_fx_row = HBoxContainer.new()
+	modbus_fx_row.add_theme_constant_override("separation", 6)
+	modbus_fx_row.visible = (plc_notation == "fx3u")
+	vbox.add_child(modbus_fx_row)
+
+	var fx_off_lbl := Label.new()
+	fx_off_lbl.text = "FX3U Offsets:"
+	fx_off_lbl.add_theme_font_size_override("font_size", 11)
+	fx_off_lbl.add_theme_color_override("font_color", Color("9cb3c4"))
+	modbus_fx_row.add_child(fx_off_lbl)
+
+	for spec in [
+		["Y:", "fx_coil_offset"],
+		["X:", "fx_di_offset"],
+		["D(HR):", "fx_hr_offset"],
+		["IR:", "fx_ir_offset"],
+	]:
+		var lbl := Label.new()
+		lbl.text = spec[0]
+		lbl.add_theme_font_size_override("font_size", 11)
+		modbus_fx_row.add_child(lbl)
+		var sp := SpinBox.new()
+		sp.min_value = 0
+		sp.max_value = 65535
+		sp.step = 1
+		sp.custom_minimum_size.x = 74
+		sp.value = int(ModbusTCP.get(spec[1]))
+		modbus_fx_row.add_child(sp)
+		match spec[1]:
+			"fx_coil_offset":
+				modbus_fx_coil_off_input = sp
+			"fx_di_offset":
+				modbus_fx_di_off_input = sp
+			"fx_hr_offset":
+				modbus_fx_hr_off_input = sp
+			"fx_ir_offset":
+				modbus_fx_ir_off_input = sp
+
+	modbus_table_title = Label.new()
+	modbus_table_title.text = "OBJECT I/O ADDRESSES (IEC: %QX/%IX or FX3U: Y0/X0 Octal, D0; empty = unused)"
+	modbus_table_title.add_theme_font_size_override("font_size", 11)
+	modbus_table_title.add_theme_color_override("font_color", Color("7ea7c2"))
+	vbox.add_child(modbus_table_title)
 
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 230)
@@ -3980,11 +4265,12 @@ func _build_modbus_dialog(ui_root: Control) -> void:
 	footer.add_theme_constant_override("separation", 8)
 	vbox.add_child(footer)
 
-	var auto_btn := Button.new()
-	auto_btn.text = "Auto-Map IEC"
-	_style_accent_button(auto_btn, "1e6b45", "278758", "3eb87a")
-	auto_btn.pressed.connect(_auto_map_modbus_iec)
-	footer.add_child(auto_btn)
+	modbus_auto_map_btn = Button.new()
+	modbus_auto_map_btn.text = "Auto-Map FX3U" if plc_notation == "fx3u" else "Auto-Map IEC"
+	modbus_auto_map_btn.tooltip_text = "Auto-assign I/O addresses for all objects"
+	_style_accent_button(modbus_auto_map_btn, "1e6b45", "278758", "3eb87a")
+	modbus_auto_map_btn.pressed.connect(_auto_map_modbus_iec)
+	footer.add_child(modbus_auto_map_btn)
 
 	var clear_btn := Button.new()
 	clear_btn.text = "Clear All"
@@ -4090,7 +4376,55 @@ RST C0
 LD_GT %s 80
 ST %s
 """ % [tank_pump, tank_iw, tank_iw, tank_pump],
+		"[FX3U] Start/Stop Latch (X/Y)": """// FX3U: X0=Start, X1=Stop(NC), Y0=Conveyor
+LD X0
+OR Y0
+ANI X1
+OUT Y0
+END
+""",
+		"[FX3U] Timer 2s (OUT T0 K20)": """// FX3U: T0 uses 100ms base -> K20 = 2.0s
+LD X0
+OUT T0 K20
+LD T0
+OUT Y0
+END
+""",
+		"[FX3U] Counter 5 (OUT C0 K5)": """// FX3U: Count 5 pulses on X0 -> Y0 ON, X1 resets C0
+LD X0
+OUT C0 K5
+LD C0
+OUT Y0
+LD X1
+RST C0
+END
+""",
+		"[FX3U] Tank Compare (LD> IW0 K80)": """// FX3U: Turn on Y0 when IW0 > 80 (copy IW0 to D0)
+LD X0
+MOV IW0 D0
+LD> D0 K80
+OUT Y0
+END
+""",
 	}
+
+
+func _set_plc_notation(notation: String, save_cfg: bool = true) -> void:
+	plc_notation = "fx3u" if notation == "fx3u" else "iec"
+	var is_fx := plc_notation == "fx3u"
+	ModbusTCP.address_profile = ModbusTCP.AddressProfile.FX3U_OFFSET if is_fx else ModbusTCP.AddressProfile.STANDARD_OPENPLC
+	if is_instance_valid(modbus_profile_option):
+		modbus_profile_option.select(1 if is_fx else 0)
+	if is_instance_valid(ladder_notation_option):
+		ladder_notation_option.select(1 if is_fx else 0)
+	if is_instance_valid(modbus_fx_row):
+		modbus_fx_row.visible = is_fx
+	_refresh_modbus_dialog()
+	_refresh_transform_controls()
+	_refresh_io_status_list()
+	_refresh_ladder_watch()
+	if save_cfg and not test_mode and is_inside_tree():
+		_save_settings()
 
 
 func _build_ladder_dialog(ui_root: Control) -> void:
@@ -4128,11 +4462,21 @@ func _build_ladder_dialog(ui_root: Control) -> void:
 	vbox.add_child(header)
 
 	var heading := Label.new()
-	heading.text = "LADDER / IEC 61131-3 SOFT-PLC"
+	heading.text = "LADDER / IL SOFT-PLC (OpenPLC & FX3U)"
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_theme_font_size_override("font_size", 15)
 	heading.add_theme_color_override("font_color", Color("eef7fa"))
 	header.add_child(heading)
+
+	ladder_notation_option = OptionButton.new()
+	ladder_notation_option.add_item("OpenPLC (IEC)", 0)
+	ladder_notation_option.add_item("FX3U (X/Y/D)", 1)
+	ladder_notation_option.select(1 if plc_notation == "fx3u" else 0)
+	ladder_notation_option.item_selected.connect(
+		func(idx: int):
+			_set_plc_notation("fx3u" if idx == 1 else "iec", true),
+	)
+	header.add_child(ladder_notation_option)
 
 	ladder_enabled_check = CheckBox.new()
 	ladder_enabled_check.text = "Enable Internal PLC"
@@ -4190,7 +4534,7 @@ func _build_ladder_dialog(ui_root: Control) -> void:
 	bar.add_child(reset_plc_btn)
 
 	var help_lbl := Label.new()
-	help_lbl.text = "Ops: LD LDN LDP LDF AND ANDN OR ORN AND( OR( ) | ST STN S R | TON TOF (ms/s) | CTU CTD RST | LD_GT AND_EQ ..."
+	help_lbl.text = "IEC: LD LDN AND ANDN OR ORN ST S R TON TOF CTU LD_GT | FX3U: LDI ANI ORI OUT(T0 K20 / C0 K5) SET RST PLS MOV MPS/MRD/MPP LD> END | X/Y Octal, M, D, K"
 	help_lbl.add_theme_font_size_override("font_size", 11)
 	help_lbl.add_theme_color_override("font_color", Color("7ea7c2"))
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -4264,7 +4608,7 @@ func _refresh_ladder_watch() -> void:
 	var active_m: Array[String] = []
 	for i in range(64):
 		if soft_plc.memory_bits[i]:
-			active_m.append("%%MX%d.%d" % [i / 8, i % 8])
+			active_m.append(("M%d" % i) if plc_notation == "fx3u" else ("%%MX%d.%d" % [i / 8, i % 8]))
 	if not active_m.is_empty():
 		parts.append("M: " + ", ".join(active_m.slice(0, 6)))
 	var active_t: Array[String] = []
@@ -4292,6 +4636,26 @@ func _apply_modbus_server_settings() -> void:
 	ModbusTCP.mode = ModbusTCP.Mode.CLIENT if is_client else ModbusTCP.Mode.SERVER
 	if is_instance_valid(modbus_poll_input):
 		ModbusTCP.poll_interval = clampf(float(modbus_poll_input.value) / 1000.0, 0.005, 1.0)
+	if is_instance_valid(modbus_profile_option):
+		var is_fx := modbus_profile_option.selected == 1
+		plc_notation = "fx3u" if is_fx else "iec"
+		ModbusTCP.address_profile = ModbusTCP.AddressProfile.FX3U_OFFSET if is_fx else ModbusTCP.AddressProfile.STANDARD_OPENPLC
+	if is_instance_valid(modbus_unit_id_input):
+		var uid := int(modbus_unit_id_input.value)
+		if is_client:
+			ModbusTCP.client_unit_id = clampi(uid if uid > 0 else 1, 1, 247)
+		else:
+			ModbusTCP.unit_id_filter = clampi(uid, 0, 247)
+	if is_instance_valid(modbus_pack_di_check):
+		ModbusTCP.client_packed_di = modbus_pack_di_check.button_pressed
+	if is_instance_valid(modbus_fx_coil_off_input):
+		ModbusTCP.fx_coil_offset = int(modbus_fx_coil_off_input.value)
+	if is_instance_valid(modbus_fx_di_off_input):
+		ModbusTCP.fx_di_offset = int(modbus_fx_di_off_input.value)
+	if is_instance_valid(modbus_fx_hr_off_input):
+		ModbusTCP.fx_hr_offset = int(modbus_fx_hr_off_input.value)
+	if is_instance_valid(modbus_fx_ir_off_input):
+		ModbusTCP.fx_ir_offset = int(modbus_fx_ir_off_input.value)
 	if is_client:
 		ModbusTCP.remote_host = ip_txt if not ip_txt.is_empty() else "127.0.0.1"
 		ModbusTCP.remote_port = int(modbus_port_input.value)
@@ -4325,6 +4689,30 @@ func _auto_map_modbus_iec() -> void:
 		var kind := str(obj.get_meta("kind", ""))
 		if kind in PRODUCT_KINDS or kind in PROP_KINDS:
 			continue
+		if kind == "cabinet":
+			obj.set_meta("modbus_coil", -1)
+			obj.set_meta("modbus_input", -1)
+			obj.set_meta("modbus_input_reg", -1)
+			var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
+			for slot_item in dyn_slots:
+				if slot_item is Dictionary:
+					var mk := str(slot_item.get("kind", "lamp"))
+					if mk == "potentiometer":
+						slot_item["modbus_input_reg"] = next_ir
+						next_ir += 1
+					elif mk == "dpm":
+						slot_item["modbus_holding_reg"] = next_hr
+						next_hr += 1
+					elif mk == "switch_3pos":
+						slot_item["modbus_input"] = next_input
+						next_input += 2
+					elif mk in ["push_button", "button", "switch_select"]:
+						slot_item["modbus_input"] = next_input
+						next_input += 1
+					else:
+						slot_item["modbus_coil"] = next_coil
+						next_coil += 1
+			continue
 		if kind in [
 			"conveyor",
 			"conveyor_short",
@@ -4339,11 +4727,10 @@ func _auto_map_modbus_iec() -> void:
 			"water_tank",
 			"solenoid_valve",
 			"reject_bin",
-			"cabinet",
 		]:
 			obj.set_meta("modbus_coil", next_coil)
 			next_coil += 3 if kind == "stack_light" else 1
-		if kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "cabinet", "water_tank", "light_curtain"]:
+		if kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "water_tank", "light_curtain"]:
 			obj.set_meta("modbus_input", next_input)
 			next_input += 3 if kind == "water_tank" else 1
 		if kind in ["vision_sensor", "rgb_sensor", "water_tank"]:
@@ -4356,21 +4743,32 @@ func _auto_map_modbus_iec() -> void:
 	_refresh_transform_controls()
 	_refresh_io_status_list()
 	_save_settings()
+	_save_layout(true)
 
 
 func _clear_all_modbus_tags() -> void:
 	for item in CABINET_IO_DEFS:
 		cabinet_io_addrs[item["id"]] = -1
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
-		if str(obj.get_meta("kind", "")) not in PRODUCT_KINDS:
+		var kind := str(obj.get_meta("kind", ""))
+		if kind not in PRODUCT_KINDS:
 			obj.set_meta("modbus_coil", -1)
 			obj.set_meta("modbus_input", -1)
 			obj.set_meta("modbus_input_reg", -1)
 			obj.set_meta("modbus_holding_reg", -1)
+			if kind == "cabinet":
+				var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
+				for slot_item in dyn_slots:
+					if slot_item is Dictionary:
+						slot_item["modbus_coil"] = -1
+						slot_item["modbus_input"] = -1
+						slot_item["modbus_input_reg"] = -1
+						slot_item["modbus_holding_reg"] = -1
 	_refresh_modbus_dialog()
 	_refresh_transform_controls()
 	_refresh_io_status_list()
 	_save_settings()
+	_save_layout(true)
 
 
 func _refresh_modbus_dialog() -> void:
@@ -4394,6 +4792,31 @@ func _refresh_modbus_dialog() -> void:
 	if is_instance_valid(modbus_poll_input):
 		modbus_poll_input.value = int(round(ModbusTCP.poll_interval * 1000.0))
 		modbus_poll_input.editable = mb_enabled
+	if is_instance_valid(modbus_profile_option):
+		modbus_profile_option.select(1 if plc_notation == "fx3u" else 0)
+	if is_instance_valid(modbus_unit_id_input):
+		modbus_unit_id_input.value = ModbusTCP.client_unit_id if is_client else ModbusTCP.unit_id_filter
+	if is_instance_valid(modbus_pack_di_check):
+		modbus_pack_di_check.set_pressed_no_signal(ModbusTCP.client_packed_di)
+		modbus_pack_di_check.disabled = not is_client
+	if is_instance_valid(modbus_fx_row):
+		modbus_fx_row.visible = (plc_notation == "fx3u")
+	if is_instance_valid(modbus_fx_coil_off_input):
+		modbus_fx_coil_off_input.value = ModbusTCP.fx_coil_offset
+	if is_instance_valid(modbus_fx_di_off_input):
+		modbus_fx_di_off_input.value = ModbusTCP.fx_di_offset
+	if is_instance_valid(modbus_fx_hr_off_input):
+		modbus_fx_hr_off_input.value = ModbusTCP.fx_hr_offset
+	if is_instance_valid(modbus_fx_ir_off_input):
+		modbus_fx_ir_off_input.value = ModbusTCP.fx_ir_offset
+	if is_instance_valid(modbus_table_title):
+		modbus_table_title.text = (
+			"OBJECT I/O ADDRESSES (FX3U: Y0/X0 Octal, D0 or %QX/%IX; empty = unused)"
+			if plc_notation == "fx3u"
+			else "OBJECT I/O ADDRESSES (IEC 61131-3: %QX/%IX or FX3U Y0/X0; empty = unused)"
+		)
+	if is_instance_valid(modbus_auto_map_btn):
+		modbus_auto_map_btn.text = "Auto-Map FX3U" if plc_notation == "fx3u" else "Auto-Map IEC"
 	if is_instance_valid(modbus_restart_btn):
 		modbus_restart_btn.disabled = not mb_enabled
 	if is_instance_valid(modbus_srv_status):
@@ -4530,11 +4953,10 @@ func _refresh_modbus_dialog() -> void:
 			"water_tank",
 			"solenoid_valve",
 			"reject_bin",
-			"cabinet",
 		]
 		coil_edit.editable = has_coil
 		coil_edit.placeholder_text = "%QX0.0" if has_coil else "-"
-		coil_edit.text = _format_iec_address(int(obj.get_meta("modbus_coil", -1)), "QX") if has_coil else ""
+		coil_edit.text = _format_iec_address(int(obj.get_meta("modbus_coil", -1)), "QX") if has_coil else ("-" if kind == "cabinet" else "")
 		if has_coil:
 			var target_obj := obj
 			coil_edit.text_changed.connect(
@@ -4559,10 +4981,10 @@ func _refresh_modbus_dialog() -> void:
 		var input_edit := LineEdit.new()
 		input_edit.custom_minimum_size.x = 130
 		input_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var has_input := kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "cabinet", "water_tank", "light_curtain"]
+		var has_input := kind in ["sensor", "vision_sensor", "rgb_sensor", "stopper", "water_tank", "light_curtain"]
 		input_edit.editable = has_input
 		input_edit.placeholder_text = "%IX0.0" if has_input else "-"
-		input_edit.text = _format_iec_address(int(obj.get_meta("modbus_input", -1)), "IX") if has_input else ""
+		input_edit.text = _format_iec_address(int(obj.get_meta("modbus_input", -1)), "IX") if has_input else ("-" if kind == "cabinet" else "")
 		if has_input:
 			var target_obj := obj
 			input_edit.text_changed.connect(
@@ -4601,21 +5023,103 @@ func _refresh_modbus_dialog() -> void:
 			_add_modbus_word_subrow(obj, "  └ Out Word (IR)", "modbus_input_reg", "IW", false)
 			_add_modbus_word_subrow(obj, "  └ Cmd Word (HR)", "modbus_holding_reg", "QW", true)
 		elif kind == "cabinet":
-			var cab_items := _collect_cabinet_status_items(obj)
-			var has_pot := false
-			for cab_it in cab_items:
-				var cdir := str(cab_it.get("dir", ""))
-				var ckind := str(cab_it.get("kind", cdir))
-				var caddr := int(cab_it.get("addr", -1))
-				if cdir == "coil":
-					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), ckind, _format_iec_address(caddr, "QX") if caddr >= 0 else "-", "-")
-				elif cdir == "input":
-					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), ckind, "-", _format_iec_address(caddr, "IX") if caddr >= 0 else "-")
-				elif cdir == "input_reg":
-					has_pot = true
-					_add_modbus_subrow_label("  └ " + str(cab_it["label"]), "pot (IR)", "-", _format_word_address(caddr, "IW") if caddr >= 0 else "-")
-			if has_pot:
-				_add_modbus_word_subrow(obj, "  └ Pot Base (IR)", "modbus_input_reg", "IW", false)
+			var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
+			for slot_item in dyn_slots:
+				if not (slot_item is Dictionary):
+					continue
+				var mk := str(slot_item.get("kind", "lamp"))
+				var slbl := str(slot_item.get("label", "MOD"))
+				_add_cabinet_slot_modbus_row(obj, slot_item, "  └ " + slbl, mk)
+
+
+func _add_cabinet_slot_modbus_row(_cab: Node3D, slot_item: Dictionary, label_text: String, mkind: String) -> void:
+	var n_lbl := Label.new()
+	n_lbl.text = label_text
+	n_lbl.custom_minimum_size.x = 135
+	n_lbl.add_theme_font_size_override("font_size", 11)
+	n_lbl.add_theme_color_override("font_color", Color("b8ccd8"))
+	modbus_io_grid.add_child(n_lbl)
+
+	var t_lbl := Label.new()
+	t_lbl.text = mkind
+	t_lbl.custom_minimum_size.x = 75
+	t_lbl.add_theme_font_size_override("font_size", 11)
+	t_lbl.add_theme_color_override("font_color", Color("6f8696"))
+	modbus_io_grid.add_child(t_lbl)
+
+	var dash := Label.new()
+	dash.text = "-"
+	dash.add_theme_font_size_override("font_size", 11)
+	dash.add_theme_color_override("font_color", Color("5c6e7c"))
+
+	var edit := LineEdit.new()
+	edit.custom_minimum_size.x = 130
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	if mkind == "potentiometer":
+		edit.placeholder_text = "D0" if plc_notation == "fx3u" else "%IW0"
+		edit.text = _format_word_address(int(slot_item.get("modbus_input_reg", -1)), "IW")
+		edit.text_changed.connect(func(txt: String):
+			var p := _parse_word_register_address(txt)
+			if p >= -1:
+				slot_item["modbus_input_reg"] = p
+				_save_settings()
+				_save_layout(true)
+		)
+		edit.focus_exited.connect(func():
+			edit.text = _format_word_address(int(slot_item.get("modbus_input_reg", -1)), "IW")
+			_refresh_io_status_list()
+		)
+		modbus_io_grid.add_child(dash)
+		modbus_io_grid.add_child(edit)
+	elif mkind == "dpm":
+		edit.placeholder_text = "D10" if plc_notation == "fx3u" else "%QW10"
+		edit.text = _format_word_address(int(slot_item.get("modbus_holding_reg", -1)), "QW")
+		edit.text_changed.connect(func(txt: String):
+			var p := _parse_word_register_address(txt)
+			if p >= -1:
+				slot_item["modbus_holding_reg"] = p
+				_save_settings()
+				_save_layout(true)
+		)
+		edit.focus_exited.connect(func():
+			edit.text = _format_word_address(int(slot_item.get("modbus_holding_reg", -1)), "QW")
+			_refresh_io_status_list()
+		)
+		modbus_io_grid.add_child(edit)
+		modbus_io_grid.add_child(dash)
+	elif mkind in ["push_button", "button", "switch_select", "switch_3pos"]:
+		edit.placeholder_text = "X0" if plc_notation == "fx3u" else "%IX0.0"
+		edit.text = _format_iec_address(int(slot_item.get("modbus_input", -1)), "IX")
+		edit.text_changed.connect(func(txt: String):
+			var p := _parse_iec_or_int_address(txt)
+			if p >= -1:
+				slot_item["modbus_input"] = p
+				_save_settings()
+				_save_layout(true)
+		)
+		edit.focus_exited.connect(func():
+			edit.text = _format_iec_address(int(slot_item.get("modbus_input", -1)), "IX")
+			_refresh_io_status_list()
+		)
+		modbus_io_grid.add_child(dash)
+		modbus_io_grid.add_child(edit)
+	else:
+		edit.placeholder_text = "Y0" if plc_notation == "fx3u" else "%QX0.0"
+		edit.text = _format_iec_address(int(slot_item.get("modbus_coil", -1)), "QX")
+		edit.text_changed.connect(func(txt: String):
+			var p := _parse_iec_or_int_address(txt)
+			if p >= -1:
+				slot_item["modbus_coil"] = p
+				_save_settings()
+				_save_layout(true)
+		)
+		edit.focus_exited.connect(func():
+			edit.text = _format_iec_address(int(slot_item.get("modbus_coil", -1)), "QX")
+			_refresh_io_status_list()
+		)
+		modbus_io_grid.add_child(edit)
+		modbus_io_grid.add_child(dash)
 
 
 func _add_modbus_subrow_label(label_text: String, type_text: String, coil_text: String, input_text: String) -> void:
@@ -4764,9 +5268,16 @@ func _build_transform_controls(ui_root: Control) -> void:
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		margin.add_theme_constant_override(side, 12)
 	transform_panel.add_child(margin)
+	transform_scroll = ScrollContainer.new()
+	transform_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	transform_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	transform_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(transform_scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 6)
-	margin.add_child(column)
+	transform_scroll.add_child(column)
+	transform_column = column
 	transform_title = Label.new()
 	transform_title.text = "OBJECT CONTROLS"
 	column.add_child(transform_title)
@@ -4949,7 +5460,7 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_slot_box.add_theme_constant_override("separation", 4)
 	column.add_child(cabinet_slot_box)
 	var slot_hdr := Label.new()
-	slot_hdr.text = "MODULAR FACEPLATE (3x4)"
+	slot_hdr.text = "MODULAR FACEPLATE (3x5)"
 	slot_hdr.add_theme_font_size_override("font_size", 11)
 	slot_hdr.add_theme_color_override("font_color", Color("7ea7c2"))
 	cabinet_slot_box.add_child(slot_hdr)
@@ -4959,10 +5470,10 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_slot_grid.add_theme_constant_override("v_separation", 4)
 	cabinet_slot_box.add_child(cabinet_slot_grid)
 	cabinet_slot_buttons.clear()
-	for r_i in range(4):
+	for r_i in range(5):
 		for c_i in range(3):
 			var cell_btn := Button.new()
-			cell_btn.custom_minimum_size = Vector2(0, 26)
+			cell_btn.custom_minimum_size = Vector2(0, 22)
 			cell_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			cell_btn.add_theme_font_size_override("font_size", 10)
 			cell_btn.pressed.connect(_on_cabinet_grid_cell_pressed.bind(c_i, r_i))
@@ -4981,6 +5492,7 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_slot_kind.add_item("Switch Select", 2)
 	cabinet_slot_kind.add_item("Switch 3-Pos", 3)
 	cabinet_slot_kind.add_item("Potentiometer", 4)
+	cabinet_slot_kind.add_item("Digital Panel Meter (DPM)", 5)
 	cabinet_slot_kind.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cabinet_slot_kind.item_selected.connect(func(_idx: int): _on_live_edit_cabinet_slot())
 	slot_cfg_row.add_child(cabinet_slot_kind)
@@ -4995,6 +5507,20 @@ func _build_transform_controls(ui_root: Control) -> void:
 	cabinet_slot_label.text = "AUX1"
 	cabinet_slot_label.text_changed.connect(func(_t: String): _on_live_edit_cabinet_slot())
 	cabinet_slot_box.add_child(cabinet_slot_label)
+	cabinet_dpm_row = HBoxContainer.new()
+	cabinet_dpm_row.visible = false
+	cabinet_slot_box.add_child(cabinet_dpm_row)
+	cabinet_dpm_unit = LineEdit.new()
+	cabinet_dpm_unit.placeholder_text = "Unit (V, A, Hz, °C)"
+	cabinet_dpm_unit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cabinet_dpm_unit.text_changed.connect(func(_t: String): _on_live_edit_cabinet_slot())
+	cabinet_dpm_row.add_child(cabinet_dpm_unit)
+	cabinet_dpm_decimals = OptionButton.new()
+	cabinet_dpm_decimals.add_item("0 dec", 0)
+	cabinet_dpm_decimals.add_item("1 dec (0.0)", 1)
+	cabinet_dpm_decimals.add_item("2 dec (0.00)", 2)
+	cabinet_dpm_decimals.item_selected.connect(func(_idx: int): _on_live_edit_cabinet_slot())
+	cabinet_dpm_row.add_child(cabinet_dpm_decimals)
 	var slot_btn_row := HBoxContainer.new()
 	cabinet_slot_box.add_child(slot_btn_row)
 	var slot_apply_btn := Button.new()
@@ -5026,6 +5552,11 @@ func _build_transform_controls(ui_root: Control) -> void:
 	modbus_section_header.add_theme_color_override("font_color", Color("7ea7c2"))
 	modbus_section_header.visible = false
 	column.add_child(modbus_section_header)
+	modbus_slot_io_label = Label.new()
+	modbus_slot_io_label.add_theme_font_size_override("font_size", 11)
+	modbus_slot_io_label.add_theme_color_override("font_color", Color("8fd1a6"))
+	modbus_slot_io_label.visible = false
+	column.add_child(modbus_slot_io_label)
 	modbus_coil_row = HBoxContainer.new()
 	modbus_coil_row.visible = false
 	column.add_child(modbus_coil_row)
@@ -5249,42 +5780,73 @@ func _refresh_transform_controls() -> void:
 			"water_tank",
 		]
 		var has_input_reg := is_word_sensor or kind_str == "water_tank"
+		var has_holding_reg := is_word_sensor
+		var c_addr := int(selected_object.get_meta("modbus_coil", -1))
+		var i_addr := int(selected_object.get_meta("modbus_input", -1))
+		var ir_addr := int(selected_object.get_meta("modbus_input_reg", -1))
+		var hr_addr := int(selected_object.get_meta("modbus_holding_reg", -1))
+		if is_instance_valid(cabinet_dpm_row):
+			cabinet_dpm_row.visible = is_cabinet and _selected_cabinet_slot_kind_str() == "dpm"
 		if is_cabinet:
-			for cab_it in _collect_cabinet_status_items(selected_object):
-				var d := str(cab_it.get("dir", ""))
-				if d == "coil":
-					has_coil = true
-				elif d == "input":
-					has_input = true
-				elif d == "input_reg":
+			var sel_slot := _get_selected_cabinet_slot_item()
+			if sel_slot.is_empty():
+				has_coil = false
+				has_input = false
+				has_input_reg = false
+				has_holding_reg = false
+			else:
+				var skind := str(sel_slot.get("kind", "lamp"))
+				if skind == "potentiometer":
 					has_input_reg = true
+					ir_addr = int(sel_slot.get("modbus_input_reg", -1))
+				elif skind == "dpm":
+					has_holding_reg = true
+					hr_addr = int(sel_slot.get("modbus_holding_reg", -1))
+				elif skind in ["push_button", "button", "switch_select", "switch_3pos"]:
+					has_input = true
+					i_addr = int(sel_slot.get("modbus_input", -1))
+				else:
+					has_coil = true
+					c_addr = int(sel_slot.get("modbus_coil", -1))
+		var is_fx_not := plc_notation == "fx3u"
 		modbus_coil_row.visible = has_coil
 		if has_coil and is_instance_valid(modbus_coil_input):
-			var c_addr := int(selected_object.get_meta("modbus_coil", -1))
-			modbus_coil_input.text = _format_iec_address(c_addr, "QX")
+			modbus_coil_input.placeholder_text = "Y0 or 0..255" if is_fx_not else "%QX0.0 or 0..255"
+			if not modbus_coil_input.has_focus():
+				modbus_coil_input.text = _format_iec_address(c_addr, "QX")
 		modbus_input_row.visible = has_input
 		if has_input and is_instance_valid(modbus_input_field):
-			var i_addr := int(selected_object.get_meta("modbus_input", -1))
-			modbus_input_field.text = _format_iec_address(i_addr, "IX")
+			modbus_input_field.placeholder_text = "X0 or 0..255" if is_fx_not else "%IX0.0 or 0..255"
+			if not modbus_input_field.has_focus():
+				modbus_input_field.text = _format_iec_address(i_addr, "IX")
 		vision_ir_row.visible = has_input_reg
 		if has_input_reg and is_instance_valid(vision_ir_field):
-			var ir_addr := int(selected_object.get_meta("modbus_input_reg", -1))
-			vision_ir_field.text = _format_word_address(ir_addr, "IW")
-		vision_hr_row.visible = is_word_sensor
-		if is_word_sensor and is_instance_valid(vision_hr_field):
-			var hr_addr := int(selected_object.get_meta("modbus_holding_reg", -1))
-			vision_hr_field.text = _format_word_address(hr_addr, "QW")
-		var show_modbus: bool = has_coil or has_input or has_input_reg or is_word_sensor
+			vision_ir_field.placeholder_text = "D0 or 0..255" if is_fx_not else "%IW0 or 0..255"
+			if not vision_ir_field.has_focus():
+				vision_ir_field.text = _format_word_address(ir_addr, "IW")
+		vision_hr_row.visible = has_holding_reg
+		if has_holding_reg and is_instance_valid(vision_hr_field):
+			vision_hr_field.placeholder_text = "D10 or 10..255" if is_fx_not else "%QW10 or 10..255"
+			if not vision_hr_field.has_focus():
+				vision_hr_field.text = _format_word_address(hr_addr, "QW")
+		var show_modbus: bool = is_cabinet or has_coil or has_input or has_input_reg or has_holding_reg
 		if is_instance_valid(modbus_section_sep):
 			modbus_section_sep.visible = show_modbus
 		if is_instance_valid(modbus_section_header):
 			modbus_section_header.visible = show_modbus
+		if is_instance_valid(modbus_slot_io_label):
+			modbus_slot_io_label.visible = is_cabinet and show_modbus
 		_refresh_modbus_conflict_warning()
 		_fit_transform_panel()
 		_fit_transform_panel.call_deferred()
 
 
 func _fit_transform_panel() -> void:
+	if is_instance_valid(transform_scroll) and is_instance_valid(transform_column):
+		var col_sz := transform_column.get_combined_minimum_size()
+		var vp_h := get_viewport().get_visible_rect().size.y if get_viewport() != null else 720.0
+		var max_scroll_h := maxf(200.0, vp_h - 150.0)
+		transform_scroll.custom_minimum_size = Vector2(maxf(col_sz.x, 260.0), minf(col_sz.y, max_scroll_h))
 	_fit_bottom_right_panel(transform_panel, 284.0)
 
 
@@ -5294,6 +5856,17 @@ func _parse_iec_or_int_address(raw_text: String) -> int:
 		return -1
 	if s.is_valid_int():
 		return clampi(s.to_int(), 0, 255)
+	if (s.begins_with("X") or s.begins_with("Y")) and not s.contains("."):
+		var oct_str := s.substr(1)
+		if oct_str.is_empty():
+			return -2
+		var oct_val := 0
+		for i in range(oct_str.length()):
+			var ch := oct_str.unicode_at(i)
+			if ch < 48 or ch > 55:
+				return -2
+			oct_val = oct_val * 8 + (ch - 48)
+		return clampi(oct_val, 0, 255)
 	if s.begins_with("%"):
 		s = s.substr(1)
 	if s.begins_with("QX") or s.begins_with("IX"):
@@ -5315,7 +5888,30 @@ func _parse_iec_or_int_address(raw_text: String) -> int:
 func _format_iec_address(addr: int, prefix: String) -> String:
 	if addr < 0:
 		return ""
+	if plc_notation == "fx3u":
+		var fx_pfx := "Y" if prefix == "QX" else "X"
+		return "%s%o" % [fx_pfx, addr]
 	return "%%%s%d.%d" % [prefix, addr / 8, addr % 8]
+
+
+func _set_selected_modbus_addr(meta_key: String, addr: int) -> void:
+	if not is_instance_valid(selected_object):
+		return
+	if str(selected_object.get_meta("kind", "")) == "cabinet":
+		var sel_slot := _get_selected_cabinet_slot_item()
+		if not sel_slot.is_empty():
+			sel_slot[meta_key] = addr
+		return
+	selected_object.set_meta(meta_key, addr)
+
+
+func _get_selected_modbus_addr(meta_key: String) -> int:
+	if not is_instance_valid(selected_object):
+		return -1
+	if str(selected_object.get_meta("kind", "")) == "cabinet":
+		var sel_slot := _get_selected_cabinet_slot_item()
+		return int(sel_slot.get(meta_key, -1)) if not sel_slot.is_empty() else -1
+	return int(selected_object.get_meta(meta_key, -1))
 
 
 func _on_modbus_tag_changed(meta_key: String, raw_text: String) -> void:
@@ -5323,7 +5919,8 @@ func _on_modbus_tag_changed(meta_key: String, raw_text: String) -> void:
 		return
 	var parsed := _parse_iec_or_int_address(raw_text)
 	if parsed >= -1:
-		selected_object.set_meta(meta_key, parsed)
+		_set_selected_modbus_addr(meta_key, parsed)
+		_refresh_cabinet_slot_io_preview()
 		_save_settings()
 
 
@@ -5378,8 +5975,21 @@ func _add_modbus_row_buttons(
 func _auto_assign_modbus(meta_key: String, field: LineEdit, prefix: String, is_word: bool) -> void:
 	if not is_instance_valid(selected_object) or not is_instance_valid(field):
 		return
+	var is_cab := str(selected_object.get_meta("kind", "")) == "cabinet"
+	var sel_slot := _get_selected_cabinet_slot_item() if is_cab else {}
 	var used := {}
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
+		var okind := str(obj.get_meta("kind", ""))
+		if okind == "cabinet":
+			var dslots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
+			for s in dslots:
+				if s is Dictionary and s != sel_slot:
+					var sv := int(s.get(meta_key, -1))
+					if sv >= 0:
+						used[sv] = true
+						if meta_key == "modbus_input" and str(s.get("kind", "")) == "switch_3pos":
+							used[sv + 1] = true
+			continue
 		if obj == selected_object:
 			continue
 		var v := int(obj.get_meta(meta_key, -1))
@@ -5392,21 +6002,25 @@ func _auto_assign_modbus(meta_key: String, field: LineEdit, prefix: String, is_w
 	if next_addr > 255:
 		sandbox_label.text = "No free %s address" % prefix
 		return
-	selected_object.set_meta(meta_key, next_addr)
+	_set_selected_modbus_addr(meta_key, next_addr)
 	field.text = _format_word_address(next_addr, prefix) if is_word else _format_iec_address(next_addr, prefix)
+	_refresh_cabinet_slot_io_preview()
 	_refresh_io_status_list()
 	_refresh_modbus_conflict_warning()
 	_save_settings()
+	_save_layout(true)
 
 
 func _clear_modbus_field(meta_key: String, field: LineEdit) -> void:
 	if not is_instance_valid(selected_object) or not is_instance_valid(field):
 		return
-	selected_object.set_meta(meta_key, -1)
+	_set_selected_modbus_addr(meta_key, -1)
 	field.text = ""
+	_refresh_cabinet_slot_io_preview()
 	_refresh_io_status_list()
 	_refresh_modbus_conflict_warning()
 	_save_settings()
+	_save_layout(true)
 
 
 func _modbus_addr_span(obj: Node3D, meta_key: String) -> int:
@@ -5468,13 +6082,15 @@ func _commit_modbus_field(meta_key: String, field: LineEdit, prefix: String) -> 
 		return
 	var parsed := _parse_iec_or_int_address(field.text)
 	if parsed >= -1:
-		selected_object.set_meta(meta_key, parsed)
+		_set_selected_modbus_addr(meta_key, parsed)
 		field.text = _format_iec_address(parsed, prefix)
+		_refresh_cabinet_slot_io_preview()
 		_refresh_io_status_list()
 		_refresh_modbus_conflict_warning()
 		_save_settings()
+		_save_layout(true)
 	else:
-		field.text = _format_iec_address(int(selected_object.get_meta(meta_key, -1)), prefix)
+		field.text = _format_iec_address(_get_selected_modbus_addr(meta_key), prefix)
 
 
 func _parse_word_register_address(raw_text: String) -> int:
@@ -5483,7 +6099,7 @@ func _parse_word_register_address(raw_text: String) -> int:
 		return -1
 	if s.begins_with("%"):
 		s = s.substr(1)
-	for pfx in ["IW", "QW", "IR", "HR"]:
+	for pfx in ["IW", "QW", "IR", "HR", "D"]:
 		if s.begins_with(pfx):
 			s = s.substr(pfx.length())
 			break
@@ -5495,6 +6111,8 @@ func _parse_word_register_address(raw_text: String) -> int:
 func _format_word_address(addr: int, prefix: String) -> String:
 	if addr < 0:
 		return ""
+	if plc_notation == "fx3u":
+		return "D%d" % addr
 	return "%%%s%d" % [prefix, addr]
 
 
@@ -5503,7 +6121,8 @@ func _on_word_tag_changed(meta_key: String, raw_text: String) -> void:
 		return
 	var parsed := _parse_word_register_address(raw_text)
 	if parsed >= -1:
-		selected_object.set_meta(meta_key, parsed)
+		_set_selected_modbus_addr(meta_key, parsed)
+		_refresh_cabinet_slot_io_preview()
 		_save_settings()
 
 
@@ -5512,13 +6131,15 @@ func _commit_word_field(meta_key: String, field: LineEdit, prefix: String) -> vo
 		return
 	var parsed := _parse_word_register_address(field.text)
 	if parsed >= -1:
-		selected_object.set_meta(meta_key, parsed)
+		_set_selected_modbus_addr(meta_key, parsed)
 		field.text = _format_word_address(parsed, prefix)
+		_refresh_cabinet_slot_io_preview()
 		_refresh_io_status_list()
 		_refresh_modbus_conflict_warning()
 		_save_settings()
+		_save_layout(true)
 	else:
-		field.text = _format_word_address(int(selected_object.get_meta(meta_key, -1)), prefix)
+		field.text = _format_word_address(_get_selected_modbus_addr(meta_key), prefix)
 
 
 func _on_conveyor_speed_changed(value: float) -> void:
@@ -5800,9 +6421,12 @@ func _save_settings() -> void:
 	cfg.set_value("ui", "npc_operator_enabled", npc_operator_enabled)
 	cfg.set_value("ui", "npc_tester_enabled", npc_tester_enabled)
 	cfg.set_value("ui", "npc_safety_enabled", npc_safety_enabled)
+	cfg.set_value("ui", "npc_maintenance_enabled", npc_maintenance_enabled)
+	cfg.set_value("ui", "npc_qc_enabled", npc_qc_enabled)
 	cfg.set_value("ui", "npc_walk_speed", npc_walk_speed)
 	cfg.set_value("ui", "npc_inspect_duration", npc_inspect_duration)
 	cfg.set_value("ui", "npc_chat_enabled", npc_chat_enabled)
+	cfg.set_value("ui", "npc_sound_enabled", npc_sound_enabled)
 	cfg.set_value("ui", "sound_enabled", sound_enabled)
 	cfg.set_value("ui", "plc_mode", plc_mode)
 	cfg.set_value("ui", "running", running)
@@ -5816,6 +6440,15 @@ func _save_settings() -> void:
 	cfg.set_value("modbus", "remote_host", ModbusTCP.remote_host)
 	cfg.set_value("modbus", "remote_port", ModbusTCP.remote_port)
 	cfg.set_value("modbus", "poll_interval", ModbusTCP.poll_interval)
+	cfg.set_value("modbus", "plc_notation", plc_notation)
+	cfg.set_value("modbus", "address_profile", int(ModbusTCP.address_profile))
+	cfg.set_value("modbus", "fx_coil_offset", ModbusTCP.fx_coil_offset)
+	cfg.set_value("modbus", "fx_di_offset", ModbusTCP.fx_di_offset)
+	cfg.set_value("modbus", "fx_hr_offset", ModbusTCP.fx_hr_offset)
+	cfg.set_value("modbus", "fx_ir_offset", ModbusTCP.fx_ir_offset)
+	cfg.set_value("modbus", "unit_id_filter", ModbusTCP.unit_id_filter)
+	cfg.set_value("modbus", "client_unit_id", ModbusTCP.client_unit_id)
+	cfg.set_value("modbus", "client_packed_di", ModbusTCP.client_packed_di)
 	cfg.set_value("modbus", "cabinet_coil", cabinet_coil_addr)
 	cfg.set_value("modbus", "cabinet_input", cabinet_input_addr)
 	cfg.set_value("ladder", "enabled", soft_plc.enabled)
@@ -5868,6 +6501,23 @@ func _load_settings() -> void:
 		0.005,
 		1.0,
 	)
+	plc_notation = str(cfg.get_value("modbus", "plc_notation", "iec"))
+	if plc_notation not in ["iec", "fx3u"]:
+		plc_notation = "iec"
+	ModbusTCP.address_profile = (
+		ModbusTCP.AddressProfile.FX3U_OFFSET
+		if int(cfg.get_value("modbus", "address_profile", 1 if plc_notation == "fx3u" else 0)) == 1
+		else ModbusTCP.AddressProfile.STANDARD_OPENPLC
+	)
+	ModbusTCP.fx_coil_offset = int(cfg.get_value("modbus", "fx_coil_offset", 0))
+	ModbusTCP.fx_di_offset = int(cfg.get_value("modbus", "fx_di_offset", 0))
+	ModbusTCP.fx_hr_offset = int(cfg.get_value("modbus", "fx_hr_offset", 0))
+	ModbusTCP.fx_ir_offset = int(cfg.get_value("modbus", "fx_ir_offset", 0))
+	ModbusTCP.unit_id_filter = int(cfg.get_value("modbus", "unit_id_filter", 0))
+	ModbusTCP.client_unit_id = clampi(int(cfg.get_value("modbus", "client_unit_id", 1)), 1, 247)
+	ModbusTCP.client_packed_di = bool(cfg.get_value("modbus", "client_packed_di", true))
+	if is_instance_valid(ladder_notation_option):
+		ladder_notation_option.select(1 if plc_notation == "fx3u" else 0)
 	cabinet_coil_addr = int(cfg.get_value("modbus", "cabinet_coil", -1))
 	cabinet_input_addr = int(cfg.get_value("modbus", "cabinet_input", -1))
 	for item in CABINET_IO_DEFS:
@@ -5912,9 +6562,18 @@ func _load_settings() -> void:
 	npc_operator_enabled = bool(cfg.get_value("ui", "npc_operator_enabled", true))
 	npc_tester_enabled = bool(cfg.get_value("ui", "npc_tester_enabled", true))
 	npc_safety_enabled = bool(cfg.get_value("ui", "npc_safety_enabled", true))
+	npc_maintenance_enabled = bool(cfg.get_value("ui", "npc_maintenance_enabled", true))
+	npc_qc_enabled = bool(cfg.get_value("ui", "npc_qc_enabled", true))
+	if is_instance_valid(npc_maint_check):
+		npc_maint_check.set_pressed_no_signal(npc_maintenance_enabled)
+	if is_instance_valid(npc_qc_check):
+		npc_qc_check.set_pressed_no_signal(npc_qc_enabled)
 	npc_walk_speed = clampf(float(cfg.get_value("ui", "npc_walk_speed", 1.85)), 0.5, 4.0)
 	npc_inspect_duration = clampf(float(cfg.get_value("ui", "npc_inspect_duration", 2.2)), 0.5, 6.0)
 	npc_chat_enabled = bool(cfg.get_value("ui", "npc_chat_enabled", true))
+	npc_sound_enabled = bool(cfg.get_value("ui", "npc_sound_enabled", true))
+	if is_instance_valid(npc_sound_check):
+		npc_sound_check.set_pressed_no_signal(npc_sound_enabled)
 	_apply_npcs_enabled(saved_npcs)
 	var saved_sound := bool(cfg.get_value("ui", "sound_enabled", true))
 	_apply_sound_enabled(saved_sound)
@@ -5946,20 +6605,22 @@ func _load_settings() -> void:
 			continue
 		var key := obj.name
 		if cfg.has_section_key("objects", key + "_coil"):
-			obj.set_meta("modbus_coil", int(cfg.get_value("objects", key + "_coil", -1)))
+			var c_val := int(cfg.get_value("objects", key + "_coil", -1))
+			if c_val >= 0 or int(obj.get_meta("modbus_coil", -1)) < 0:
+				obj.set_meta("modbus_coil", c_val)
 		if cfg.has_section_key("objects", key + "_input"):
-			obj.set_meta("modbus_input", int(cfg.get_value("objects", key + "_input", -1)))
+			var i_val := int(cfg.get_value("objects", key + "_input", -1))
+			if i_val >= 0 or int(obj.get_meta("modbus_input", -1)) < 0:
+				obj.set_meta("modbus_input", i_val)
 		if kind in ["vision_sensor", "rgb_sensor"]:
 			if cfg.has_section_key("objects", key + "_input_reg"):
-				obj.set_meta(
-					"modbus_input_reg",
-					int(cfg.get_value("objects", key + "_input_reg", -1)),
-				)
+				var ir_val := int(cfg.get_value("objects", key + "_input_reg", -1))
+				if ir_val >= 0 or int(obj.get_meta("modbus_input_reg", -1)) < 0:
+					obj.set_meta("modbus_input_reg", ir_val)
 			if cfg.has_section_key("objects", key + "_holding_reg"):
-				obj.set_meta(
-					"modbus_holding_reg",
-					int(cfg.get_value("objects", key + "_holding_reg", -1)),
-				)
+				var hr_val := int(cfg.get_value("objects", key + "_holding_reg", -1))
+				if hr_val >= 0 or int(obj.get_meta("modbus_holding_reg", -1)) < 0:
+					obj.set_meta("modbus_holding_reg", hr_val)
 		if kind in ["conveyor", "conveyor_short"] and cfg.has_section_key("objects", key + "_speed"):
 			obj.set_meta(
 				"configured_speed",
@@ -5969,14 +6630,18 @@ func _load_settings() -> void:
 				_apply_conveyor_speed(obj as StaticBody3D)
 		elif kind == "cabinet":
 			if cfg.has_section_key("objects", key + "_input_reg"):
-				obj.set_meta("modbus_input_reg", int(cfg.get_value("objects", key + "_input_reg", -1)))
+				var cab_ir := int(cfg.get_value("objects", key + "_input_reg", -1))
+				if cab_ir >= 0 or int(obj.get_meta("modbus_input_reg", -1)) < 0:
+					obj.set_meta("modbus_input_reg", cab_ir)
 			if cfg.has_section_key("objects", key + "_cabinet_cfg"):
 				var cab_cfg = cfg.get_value("objects", key + "_cabinet_cfg", {})
 				if cab_cfg is Dictionary and obj.has_method("apply_customization"):
 					obj.call("apply_customization", cab_cfg)
 		elif kind == "water_tank":
 			if cfg.has_section_key("objects", key + "_input_reg"):
-				obj.set_meta("modbus_input_reg", int(cfg.get_value("objects", key + "_input_reg", -1)))
+				var wt_ir := int(cfg.get_value("objects", key + "_input_reg", -1))
+				if wt_ir >= 0 or int(obj.get_meta("modbus_input_reg", -1)) < 0:
+					obj.set_meta("modbus_input_reg", wt_ir)
 			if cfg.has_section_key("objects", key + "_tank_cfg"):
 				var wt_cfg = cfg.get_value("objects", key + "_tank_cfg", {})
 				if wt_cfg is Dictionary and obj.has_method("apply_tank_config"):
@@ -6087,46 +6752,33 @@ func _sync_modbus_io() -> void:
 			var dyn_slots: Array = obj.get("dynamic_slots") if "dynamic_slots" in obj else []
 			var dyn_btn_states: Dictionary = obj.get("dynamic_button_states") if "dynamic_button_states" in obj else {}
 			var dyn_pot_values: Dictionary = obj.get("dynamic_pot_values") if "dynamic_pot_values" in obj else {}
-			var cab_ir_addr := int(obj.get_meta("modbus_input_reg", -1))
-			if cab_ir_addr >= 0:
-				var dyn_ir_idx := 0
-				for slot_item in dyn_slots:
-					if slot_item is Dictionary and str(slot_item.get("kind", "")) == "potentiometer":
-						var pot_io := str(slot_item.get("io_id", ""))
-						var pot_val := clampf(float(dyn_pot_values.get(pot_io, slot_item.get("value", 0.0))), 0.0, 1.0)
-						ModbusTCP.set_input_register(cab_ir_addr + dyn_ir_idx, roundi(pot_val * 10000.0))
-						dyn_ir_idx += 1
-			if input_addr >= 0:
-				ModbusTCP.set_discrete_input(input_addr, bool(obj.get("start_pressed")))
-				ModbusTCP.set_discrete_input(input_addr + 1, bool(obj.get("stop_pressed")))
-				ModbusTCP.set_discrete_input(input_addr + 2, bool(obj.get("estop_active")))
-				var dyn_in_idx := 0
-				for slot_item in dyn_slots:
-					if slot_item is Dictionary:
-						var mkind := str(slot_item.get("kind", ""))
-						var slot_io := str(slot_item.get("io_id", ""))
-						if mkind == "switch_3pos":
-							ModbusTCP.set_discrete_input(input_addr + 3 + dyn_in_idx, bool(dyn_btn_states.get(slot_io + "_L", false)))
-							ModbusTCP.set_discrete_input(input_addr + 4 + dyn_in_idx, bool(dyn_btn_states.get(slot_io + "_R", false)))
-							dyn_in_idx += 2
-						elif mkind in ["push_button", "button", "switch_select"]:
-							ModbusTCP.set_discrete_input(
-								input_addr + 3 + dyn_in_idx,
-								bool(dyn_btn_states.get(slot_io, false)),
-							)
-							dyn_in_idx += 1
-			if coil_addr >= 0:
-				var g := ModbusTCP.get_coil(coil_addr)
-				obj.set("lamp_green_on", g)
-				obj.set("lamp_yellow_on", ModbusTCP.get_coil(coil_addr + 1))
-				obj.set("lamp_red_on", ModbusTCP.get_coil(coil_addr + 2))
-				obj.set("active", g)
-				var dyn_out_idx := 0
-				for slot_item in dyn_slots:
-					if slot_item is Dictionary and str(slot_item.get("kind", "")) == "lamp":
-						var slot_io := str(slot_item.get("io_id", ""))
-						obj.call("set_dynamic_lamp", slot_io, ModbusTCP.get_coil(coil_addr + 3 + dyn_out_idx))
-						dyn_out_idx += 1
+			for slot_item in dyn_slots:
+				if not (slot_item is Dictionary):
+					continue
+				var mkind := str(slot_item.get("kind", "lamp"))
+				var slot_io := str(slot_item.get("io_id", ""))
+				if mkind == "potentiometer":
+					var p_ir := int(slot_item.get("modbus_input_reg", -1))
+					if p_ir >= 0:
+						var pot_val := clampf(float(dyn_pot_values.get(slot_io, slot_item.get("value", 0.0))), 0.0, 1.0)
+						ModbusTCP.set_input_register(p_ir, roundi(pot_val * 10000.0))
+				elif mkind == "dpm":
+					var d_hr := int(slot_item.get("modbus_holding_reg", -1))
+					var d_val := ModbusTCP.get_holding_register(d_hr) if d_hr >= 0 else 0
+					obj.call("set_dynamic_dpm", slot_io, d_val)
+				elif mkind == "switch_3pos":
+					var sw_in := int(slot_item.get("modbus_input", -1))
+					if sw_in >= 0:
+						ModbusTCP.set_discrete_input(sw_in, bool(dyn_btn_states.get(slot_io + "_L", false)))
+						ModbusTCP.set_discrete_input(sw_in + 1, bool(dyn_btn_states.get(slot_io + "_R", false)))
+				elif mkind in ["push_button", "button", "switch_select"]:
+					var b_in := int(slot_item.get("modbus_input", -1))
+					if b_in >= 0:
+						ModbusTCP.set_discrete_input(b_in, bool(dyn_btn_states.get(slot_io, false)))
+				else:
+					var l_coil := int(slot_item.get("modbus_coil", -1))
+					if l_coil >= 0:
+						obj.call("set_dynamic_lamp", slot_io, ModbusTCP.get_coil(l_coil))
 			continue
 		if not running:
 			continue
@@ -6406,6 +7058,30 @@ func _set_placement(kind: String) -> void:
 		"prop_workbench":
 			dimensions = Vector3(1.60, 0.92, 0.80)
 			height = 0.46
+		"prop_forklift":
+			dimensions = Vector3(1.20, 2.05, 2.20)
+			height = 1.025
+		"prop_pallet_stack":
+			dimensions = Vector3(1.10, 1.04, 1.10)
+			height = 0.52
+		"prop_pallet_jack":
+			dimensions = Vector3(0.62, 1.18, 1.50)
+			height = 0.59
+		"prop_bollard":
+			dimensions = Vector3(0.32, 0.95, 0.32)
+			height = 0.475
+		"prop_safety_sign":
+			dimensions = Vector3(0.56, 0.90, 0.56)
+			height = 0.45
+		"prop_qc_desk":
+			dimensions = Vector3(1.40, 1.38, 0.76)
+			height = 0.69
+		"prop_production_board":
+			dimensions = Vector3(1.60, 1.85, 0.56)
+			height = 0.925
+		"prop_locker":
+			dimensions = Vector3(1.20, 1.90, 0.50)
+			height = 0.95
 	var preview_mesh := _box_mesh(placement_preview, dimensions, Vector3(0, height, 0), Color.WHITE)
 	preview_material = StandardMaterial3D.new()
 	preview_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -6503,6 +7179,22 @@ func _footprint(kind: String, angle: float) -> Vector2:
 			size = Vector2(0.70, 0.70)
 		"prop_workbench":
 			size = Vector2(1.60, 0.80)
+		"prop_forklift":
+			size = Vector2(1.20, 2.20)
+		"prop_pallet_stack":
+			size = Vector2(1.10, 1.10)
+		"prop_pallet_jack":
+			size = Vector2(0.62, 1.50)
+		"prop_bollard":
+			size = Vector2(0.32, 0.32)
+		"prop_safety_sign":
+			size = Vector2(0.56, 0.56)
+		"prop_qc_desk":
+			size = Vector2(1.40, 0.76)
+		"prop_production_board":
+			size = Vector2(1.60, 0.56)
+		"prop_locker":
+			size = Vector2(1.20, 0.50)
 	var turns := posmod(roundi(angle / 90.0), 2)
 	return Vector2(size.y, size.x) if turns == 1 else size
 
@@ -6693,6 +7385,22 @@ func _height_range(kind: String, height_offset: float) -> Vector2:
 			base = Vector2(0.0, 0.92)
 		"prop_workbench":
 			base = Vector2(0.0, 0.92)
+		"prop_forklift":
+			base = Vector2(0.0, 2.05)
+		"prop_pallet_stack":
+			base = Vector2(0.0, 1.04)
+		"prop_pallet_jack":
+			base = Vector2(0.0, 1.18)
+		"prop_bollard":
+			base = Vector2(0.0, 0.95)
+		"prop_safety_sign":
+			base = Vector2(0.0, 0.90)
+		"prop_qc_desk":
+			base = Vector2(0.0, 1.38)
+		"prop_production_board":
+			base = Vector2(0.0, 1.85)
+		"prop_locker":
+			base = Vector2(0.0, 1.90)
 	return base + Vector2(height_offset, height_offset)
 
 
@@ -7433,3 +8141,244 @@ func _apply_layout_data(data: Dictionary, auto_start: bool = false) -> void:
 	_refresh_cabinet_hud()
 	if not auto_start:
 		sandbox_label.text = "Layout loaded"
+
+
+func _update_project_file_label() -> void:
+	if not is_instance_valid(project_file_label):
+		return
+	if current_project_path.is_empty():
+		project_file_label.text = "Unsaved"
+		project_file_label.tooltip_text = "No project file opened yet"
+	else:
+		project_file_label.text = current_project_path.get_file()
+		project_file_label.tooltip_text = current_project_path
+
+
+func _on_new_project_pressed() -> void:
+	if is_instance_valid(new_project_confirm_dialog):
+		new_project_confirm_dialog.popup_centered()
+	else:
+		_create_new_project()
+
+
+func _create_new_project() -> void:
+	_is_loading_settings = true
+	_set_running(false)
+	_clear_all_forces()
+	_set_selection(null)
+	_set_workspace_size(30, 30)
+	for object in get_tree().get_nodes_in_group("sandbox_objects"):
+		if object.has_meta("base_id"):
+			object.set_meta("modbus_coil", -1)
+			object.set_meta("modbus_input", -1)
+			continue
+		object.remove_from_group("sandbox_objects")
+		if object.get_parent() == self:
+			remove_child(object)
+		object.queue_free()
+	cabinet_io_addrs.clear()
+	cabinet_coil_addr = -1
+	cabinet_input_addr = -1
+	soft_plc.enabled = false
+	soft_plc.source_code = ""
+	if is_instance_valid(ladder_code_edit):
+		ladder_code_edit.text = ""
+	if is_instance_valid(ladder_enabled_check):
+		ladder_enabled_check.set_pressed_no_signal(false)
+	ModbusTCP.enabled = false
+	ModbusTCP.stop_service()
+	_apply_plc_mode(false, false)
+	if is_instance_valid(plc_controller_option):
+		plc_controller_option.select(0)
+	_is_loading_settings = false
+	current_project_path = ""
+	_update_project_file_label()
+	_refresh_modbus_dialog()
+	_refresh_transform_controls()
+	_refresh_io_status_list()
+	_refresh_cabinet_hud()
+	_update_cabinet_panel_visibility()
+	_save_layout(true)
+	_save_settings()
+	if is_instance_valid(sandbox_label):
+		sandbox_label.text = "New project"
+
+
+func _on_open_project_pressed() -> void:
+	if not is_instance_valid(project_file_dialog):
+		return
+	project_file_dialog_mode = "open"
+	project_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	project_file_dialog.title = "Open Factory Project (.pksfac)"
+	if not current_project_path.is_empty():
+		project_file_dialog.current_dir = current_project_path.get_base_dir()
+	project_file_dialog.popup_centered_ratio(0.6)
+
+
+func _on_save_project_pressed() -> void:
+	if current_project_path.is_empty():
+		_on_save_project_as_pressed()
+		return
+	_save_project_to_path(current_project_path)
+
+
+func _on_save_project_as_pressed() -> void:
+	if not is_instance_valid(project_file_dialog):
+		return
+	project_file_dialog_mode = "save_as"
+	project_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	project_file_dialog.title = "Save Factory Project (.pksfac)"
+	if not current_project_path.is_empty():
+		project_file_dialog.current_path = current_project_path
+	else:
+		project_file_dialog.current_file = "factory_project.pksfac"
+	project_file_dialog.popup_centered_ratio(0.6)
+
+
+func _on_project_file_selected(path: String) -> void:
+	if project_file_dialog_mode == "open":
+		_load_project_from_path(path)
+	elif project_file_dialog_mode == "save_as":
+		_save_project_to_path(path)
+
+
+func _build_project_data() -> Dictionary:
+	var data := _build_layout_data()
+	data["format"] = "pks_factory_project"
+	data["project_version"] = 1
+	data["plc"] = {
+		"plc_mode": plc_mode,
+		"plc_notation": plc_notation,
+		"modbus_enabled": ModbusTCP.enabled,
+		"modbus_mode": int(ModbusTCP.mode),
+		"bind_address": ModbusTCP.bind_address,
+		"port": ModbusTCP.port,
+		"remote_host": ModbusTCP.remote_host,
+		"remote_port": ModbusTCP.remote_port,
+		"poll_interval": ModbusTCP.poll_interval,
+		"address_profile": int(ModbusTCP.address_profile),
+		"fx_coil_offset": ModbusTCP.fx_coil_offset,
+		"fx_di_offset": ModbusTCP.fx_di_offset,
+		"fx_hr_offset": ModbusTCP.fx_hr_offset,
+		"fx_ir_offset": ModbusTCP.fx_ir_offset,
+		"unit_id_filter": ModbusTCP.unit_id_filter,
+		"client_unit_id": ModbusTCP.client_unit_id,
+		"client_packed_di": ModbusTCP.client_packed_di,
+		"cabinet_coil_addr": cabinet_coil_addr,
+		"cabinet_input_addr": cabinet_input_addr,
+		"cabinet_io_addrs": cabinet_io_addrs.duplicate(true),
+	}
+	data["ladder"] = {
+		"enabled": soft_plc.enabled,
+		"code": ladder_code_edit.text if is_instance_valid(ladder_code_edit) else soft_plc.source_code,
+	}
+	data["ui"] = {
+		"decor_style": decor_style,
+		"grid_step": grid_step,
+		"show_edit_grid": show_edit_grid,
+	}
+	return data
+
+
+func _save_project_to_path(path: String) -> bool:
+	var target := path
+	if not target.to_lower().ends_with("." + PROJECT_FILE_EXT):
+		target += "." + PROJECT_FILE_EXT
+	var file := FileAccess.open(target, FileAccess.WRITE)
+	if file == null:
+		if is_instance_valid(sandbox_label):
+			sandbox_label.text = "Project save failed"
+		return false
+	file.store_string(JSON.stringify(_build_project_data(), "  "))
+	current_project_path = target
+	_update_project_file_label()
+	if is_instance_valid(sandbox_label):
+		sandbox_label.text = "Saved: " + target.get_file()
+	return true
+
+
+func _load_project_from_path(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		if is_instance_valid(sandbox_label):
+			sandbox_label.text = "Project file not found"
+		return false
+	var raw_text := FileAccess.get_file_as_string(path)
+	var data = JSON.parse_string(raw_text)
+	if not data is Dictionary or not data.get("objects") is Array:
+		if is_instance_valid(sandbox_label):
+			sandbox_label.text = "Invalid project file"
+		return false
+	_is_loading_settings = true
+	_set_running(false)
+	_apply_layout_data(data, true)
+	if data.has("ui") and data.ui is Dictionary:
+		var ui_cfg: Dictionary = data.ui
+		var saved_decor := str(ui_cfg.get("decor_style", decor_style))
+		_apply_decor_style(saved_decor)
+		grid_step = clampf(float(ui_cfg.get("grid_step", grid_step)), 0.25, 1.0)
+		show_edit_grid = bool(ui_cfg.get("show_edit_grid", show_edit_grid))
+		if is_instance_valid(grid_step_option):
+			var step_idx := 0 if grid_step < 0.35 else (2 if grid_step > 0.75 else 1)
+			grid_step_option.select(step_idx)
+		if is_instance_valid(show_grid_check):
+			show_grid_check.set_pressed_no_signal(show_edit_grid)
+		if is_instance_valid(edit_grid):
+			_rebuild_grid()
+			edit_grid.visible = edit_mode and show_edit_grid
+	if data.has("plc") and data.plc is Dictionary:
+		var plc_cfg: Dictionary = data.plc
+		plc_notation = str(plc_cfg.get("plc_notation", plc_notation))
+		ModbusTCP.mode = clampi(int(plc_cfg.get("modbus_mode", int(ModbusTCP.mode))), 0, 1)
+		ModbusTCP.bind_address = str(plc_cfg.get("bind_address", ModbusTCP.bind_address))
+		ModbusTCP.port = int(plc_cfg.get("port", ModbusTCP.port))
+		ModbusTCP.remote_host = str(plc_cfg.get("remote_host", ModbusTCP.remote_host))
+		ModbusTCP.remote_port = int(plc_cfg.get("remote_port", ModbusTCP.remote_port))
+		ModbusTCP.poll_interval = float(plc_cfg.get("poll_interval", ModbusTCP.poll_interval))
+		ModbusTCP.address_profile = clampi(int(plc_cfg.get("address_profile", int(ModbusTCP.address_profile))), 0, 1)
+		ModbusTCP.fx_coil_offset = int(plc_cfg.get("fx_coil_offset", ModbusTCP.fx_coil_offset))
+		ModbusTCP.fx_di_offset = int(plc_cfg.get("fx_di_offset", ModbusTCP.fx_di_offset))
+		ModbusTCP.fx_hr_offset = int(plc_cfg.get("fx_hr_offset", ModbusTCP.fx_hr_offset))
+		ModbusTCP.fx_ir_offset = int(plc_cfg.get("fx_ir_offset", ModbusTCP.fx_ir_offset))
+		ModbusTCP.unit_id_filter = int(plc_cfg.get("unit_id_filter", ModbusTCP.unit_id_filter))
+		ModbusTCP.client_unit_id = int(plc_cfg.get("client_unit_id", ModbusTCP.client_unit_id))
+		ModbusTCP.client_packed_di = bool(plc_cfg.get("client_packed_di", ModbusTCP.client_packed_di))
+		cabinet_coil_addr = int(plc_cfg.get("cabinet_coil_addr", cabinet_coil_addr))
+		cabinet_input_addr = int(plc_cfg.get("cabinet_input_addr", cabinet_input_addr))
+		if plc_cfg.has("cabinet_io_addrs") and plc_cfg.cabinet_io_addrs is Dictionary:
+			cabinet_io_addrs = plc_cfg.cabinet_io_addrs.duplicate(true)
+		ModbusTCP.enabled = bool(plc_cfg.get("modbus_enabled", false))
+		if ModbusTCP.enabled:
+			ModbusTCP.start_service()
+		else:
+			ModbusTCP.stop_service()
+	if data.has("ladder") and data.ladder is Dictionary:
+		var lad_cfg: Dictionary = data.ladder
+		soft_plc.enabled = bool(lad_cfg.get("enabled", false))
+		if soft_plc.enabled and ModbusTCP.enabled:
+			ModbusTCP.enabled = false
+			ModbusTCP.stop_service()
+		var lad_code := str(lad_cfg.get("code", ""))
+		if not lad_code.is_empty():
+			soft_plc.compile(lad_code)
+			if is_instance_valid(ladder_code_edit):
+				ladder_code_edit.text = lad_code
+	var want_plc: bool = bool(soft_plc.enabled) or ModbusTCP.enabled
+	if want_plc != plc_mode:
+		_apply_plc_mode(want_plc, false)
+	if is_instance_valid(ladder_enabled_check):
+		ladder_enabled_check.set_pressed_no_signal(soft_plc.enabled)
+	if is_instance_valid(plc_controller_option):
+		plc_controller_option.select(2 if soft_plc.enabled else (1 if ModbusTCP.enabled else 0))
+	_is_loading_settings = false
+	current_project_path = path
+	_update_project_file_label()
+	_refresh_modbus_dialog()
+	_refresh_transform_controls()
+	_refresh_io_status_list()
+	_refresh_cabinet_hud()
+	_update_cabinet_panel_visibility()
+	_save_layout(true)
+	_save_settings()
+	if is_instance_valid(sandbox_label):
+		sandbox_label.text = "Opened: " + path.get_file()
+	return true

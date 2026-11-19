@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(0.95, 0.75, 0.1, 1)
+metallic = 0.35
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_black"]
+albedo_color = Color(0.12, 0.13, 0.15, 1)
+metallic = 0.55
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="mesh_base"]
+size = Vector3(0.28, 0.025, 0.28)
+
+[sub_resource type="CylinderMesh" id="mesh_post"]
+top_radius = 0.075
+bottom_radius = 0.075
+height = 0.92
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="mesh_stripe"]
+top_radius = 0.078
+bottom_radius = 0.078
+height = 0.1
+radial_segments = 16
+
+[sub_resource type="BoxShape3D" id="shape_bollard"]
+size = Vector3(0.32, 0.95, 0.32)
+
+[node name="SafetyBollard" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.475, 0)
+shape = SubResource("shape_bollard")
+
+[node name="BasePlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0125, 0)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_base")
+
+[node name="Post" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, 0)
+material_override = SubResource("mat_yellow")
+mesh = SubResource("mesh_post")
+
+[node name="StripeHigh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.74, 0)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_stripe")
+
+[node name="StripeMid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_stripe")

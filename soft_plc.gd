@@ -66,6 +66,13 @@ func compile(code: String) -> Dictionary:
 			continue
 
 		var op := tokens[0].to_upper()
+		if op == "END":
+			break
+
+		if op in ["MPS", "MRD", "MPP"]:
+			compiled_ops.append({"op": op, "line": line_num})
+			continue
+
 		if op == ")":
 			if paren_depth <= 0:
 				compile_errors.append("Line %d: Unexpected ')'" % line_num)
@@ -79,6 +86,10 @@ func compile(code: String) -> Dictionary:
 			compiled_ops.append({"op": op, "line": line_num})
 			continue
 
+		const FX_BIT_ALIASES := {"LDI": "LDN", "ANI": "ANDN", "ORI": "ORN"}
+		if FX_BIT_ALIASES.has(op):
+			op = FX_BIT_ALIASES[op]
+
 		if op in ["LD", "LDN", "LDP", "LDF", "AND", "ANDN", "ANDP", "ANDF", "OR", "ORN", "ORP", "ORF"]:
 			if tokens.size() < 2:
 				compile_errors.append("Line %d: '%s' requires a bit operand" % [line_num, op])
@@ -90,15 +101,63 @@ func compile(code: String) -> Dictionary:
 			compiled_ops.append({"op": op, "ref": addr, "line": line_num})
 			continue
 
-		if op in ["ST", "STN", "S", "R"]:
+		if op == "OUT":
 			if tokens.size() < 2:
-				compile_errors.append("Line %d: '%s' requires an output bit (%QX or %MX)" % [line_num, op])
+				compile_errors.append("Line %d: 'OUT' requires target (Y0, M0, T0 K20, C0 K5)" % line_num)
+				continue
+			var t_idx := _parse_fb_index(tokens[1], "T", MAX_TIMERS)
+			if t_idx >= 0:
+				if tokens.size() < 3:
+					compile_errors.append("Line %d: 'OUT %s' requires preset (e.g. K20 or 2.0s)" % [line_num, tokens[1]])
+					continue
+				var pt_ms := _parse_fx_time_ms(tokens[2])
+				if pt_ms < 0:
+					compile_errors.append("Line %d: Invalid timer preset '%s'" % [line_num, tokens[2]])
+					continue
+				compiled_ops.append({"op": "TON", "idx": t_idx, "pt_ms": pt_ms, "line": line_num})
+				continue
+			var c_idx := _parse_fb_index(tokens[1], "C", MAX_COUNTERS)
+			if c_idx >= 0:
+				if tokens.size() < 3:
+					compile_errors.append("Line %d: 'OUT %s' requires preset (e.g. K5)" % [line_num, tokens[1]])
+					continue
+				var pv := _parse_fx_count(tokens[2])
+				if pv < 0:
+					compile_errors.append("Line %d: Invalid counter preset '%s'" % [line_num, tokens[2]])
+					continue
+				compiled_ops.append({"op": "CTU", "idx": c_idx, "pv": pv, "line": line_num})
+				continue
+			var out_addr := _parse_bit_ref(tokens[1])
+			if out_addr.is_empty() or out_addr["area"] not in ["Q", "M"]:
+				compile_errors.append("Line %d: 'OUT' target must be Y/M/%%QX/%%MX (got '%s')" % [line_num, tokens[1]])
+				continue
+			compiled_ops.append({"op": "ST", "ref": out_addr, "line": line_num})
+			continue
+
+		if op == "SET":
+			op = "S"
+
+		if op in ["ST", "STN", "S", "R", "PLS", "PLF"]:
+			if tokens.size() < 2:
+				compile_errors.append("Line %d: '%s' requires an output bit (Y/M/%%QX/%%MX)" % [line_num, op])
 				continue
 			var addr := _parse_bit_ref(tokens[1])
 			if addr.is_empty() or addr["area"] not in ["Q", "M"]:
-				compile_errors.append("Line %d: '%s' target must be %%QX or %%MX (got '%s')" % [line_num, op, tokens[1]])
+				compile_errors.append("Line %d: '%s' target must be Y/M/%%QX/%%MX (got '%s')" % [line_num, op, tokens[1]])
 				continue
 			compiled_ops.append({"op": op, "ref": addr, "line": line_num})
+			continue
+
+		if op == "MOV":
+			if tokens.size() < 3:
+				compile_errors.append("Line %d: 'MOV' requires source & destination (e.g. MOV K10 D0)" % line_num)
+				continue
+			var src := _parse_word_ref(tokens[1])
+			var dst := _parse_word_ref(tokens[2])
+			if src.is_empty() or dst.is_empty() or dst["area"] not in ["QW", "MW"]:
+				compile_errors.append("Line %d: Invalid MOV operand in '%s'" % [line_num, raw])
+				continue
+			compiled_ops.append({"op": "MOV", "src": src, "dst": dst, "line": line_num})
 			continue
 
 		if op in ["TON", "TOF"]:
@@ -189,12 +248,21 @@ func step(delta: float, mb: Node) -> void:
 	var dt_ms := delta * 1000.0
 	var cr: bool = false
 	var stack: Array[Dictionary] = []
+	var fx_stack: Array[bool] = []
 	var rung_start: bool = true
 
 	for ins_idx in range(compiled_ops.size()):
 		var ins: Dictionary = compiled_ops[ins_idx]
 		var op: String = ins["op"]
 		match op:
+			"MPS":
+				fx_stack.append(cr)
+			"MRD":
+				if not fx_stack.is_empty():
+					cr = fx_stack[fx_stack.size() - 1]
+			"MPP":
+				if not fx_stack.is_empty():
+					cr = fx_stack.pop_back()
 			"AND(", "OR(":
 				stack.append({"comb": "AND" if op == "AND(" else "OR", "cr": cr})
 				rung_start = true
@@ -330,6 +398,17 @@ func step(delta: float, mb: Node) -> void:
 				if cr:
 					_write_bit(ins["ref"], false, mb)
 				rung_start = true
+			"PLS", "PLF":
+				var pkey := "p_%d" % ins_idx
+				var prev := bool(_prev_bits.get(pkey, false))
+				_prev_bits[pkey] = cr
+				var trig := (cr and not prev) if op == "PLS" else (not cr and prev)
+				_write_bit(ins["ref"], trig, mb)
+				rung_start = true
+			"MOV":
+				if cr:
+					_write_word(ins["dst"], _read_word(ins["src"], mb), mb)
+				rung_start = true
 
 
 func _strip_comments(line: String) -> String:
@@ -359,6 +438,18 @@ func _tokenize(line: String) -> Array[String]:
 	return out
 
 
+func _parse_octal(s: String) -> int:
+	if s.is_empty():
+		return -1
+	var val := 0
+	for i in range(s.length()):
+		var code := s.unicode_at(i)
+		if code < 48 or code > 55:
+			return -1
+		val = val * 8 + (code - 48)
+	return val
+
+
 func _parse_bit_ref(token: String) -> Dictionary:
 	var s := token.strip_edges().to_upper()
 	if s.begins_with("T"):
@@ -378,6 +469,16 @@ func _parse_bit_ref(token: String) -> Dictionary:
 			var idx := c_str.to_int()
 			if idx >= 0 and idx < MAX_COUNTERS:
 				return {"area": "C", "idx": idx}
+		return {}
+	if s.begins_with("X") and not s.contains("."):
+		var x_idx := _parse_octal(s.substr(1))
+		if x_idx >= 0 and x_idx < MAX_BITS:
+			return {"area": "I", "idx": x_idx}
+		return {}
+	if s.begins_with("Y") and not s.contains("."):
+		var y_idx := _parse_octal(s.substr(1))
+		if y_idx >= 0 and y_idx < MAX_BITS:
+			return {"area": "Q", "idx": y_idx}
 		return {}
 	if s.begins_with("%"):
 		s = s.substr(1)
@@ -410,6 +511,14 @@ func _parse_word_ref(token: String) -> Dictionary:
 	var s := token.strip_edges().to_upper()
 	if s.is_valid_int():
 		return {"area": "CONST", "val": s.to_int()}
+	if s.begins_with("K") and s.substr(1).is_valid_int():
+		return {"area": "CONST", "val": s.substr(1).to_int()}
+	if s.begins_with("H") and s.length() > 1 and ("0x" + s.substr(1)).is_valid_hex_number(true):
+		return {"area": "CONST", "val": ("0x" + s.substr(1)).hex_to_int()}
+	if s.begins_with("D") and s.substr(1).is_valid_int():
+		var d_idx := s.substr(1).to_int()
+		if d_idx >= 0 and d_idx < MAX_WORDS:
+			return {"area": "MW", "idx": d_idx}
 	if s.begins_with("T") and s.ends_with(".ET"):
 		var t_str := s.substr(1, s.length() - 4)
 		if t_str.is_valid_int() and t_str.to_int() >= 0 and t_str.to_int() < MAX_TIMERS:
@@ -474,8 +583,30 @@ func _parse_int_or_kv(token: String, key: String) -> int:
 	return -1
 
 
+func _parse_fx_time_ms(token: String) -> int:
+	var s := token.strip_edges().to_upper()
+	if s.begins_with("K") and s.substr(1).is_valid_int():
+		return maxi(0, s.substr(1).to_int() * 100)
+	return _parse_time_ms(token)
+
+
+func _parse_fx_count(token: String) -> int:
+	var s := token.strip_edges().to_upper()
+	if s.begins_with("K") and s.substr(1).is_valid_int():
+		return s.substr(1).to_int()
+	return _parse_int_or_kv(token, "PV")
+
+
 func _parse_comparator_op(op: String) -> Dictionary:
 	var cmps := ["EQ", "NE", "GT", "GE", "LT", "LE"]
+	const FX_CMP_MAP := {
+		"=": "EQ",
+		"<>": "NE",
+		">": "GT",
+		">=": "GE",
+		"<": "LT",
+		"<=": "LE",
+	}
 	if op in cmps:
 		return {"comb": "AUTO", "cmp": op}
 	for prefix in ["LD_", "AND_", "OR_"]:
@@ -483,6 +614,11 @@ func _parse_comparator_op(op: String) -> Dictionary:
 			var suffix := op.substr(prefix.length())
 			if suffix in cmps:
 				return {"comb": prefix.trim_suffix("_"), "cmp": suffix}
+	for prefix in ["LD", "AND", "OR"]:
+		if op.begins_with(prefix):
+			var sym := op.substr(prefix.length())
+			if FX_CMP_MAP.has(sym):
+				return {"comb": prefix, "cmp": FX_CMP_MAP[sym]}
 	return {}
 
 
@@ -518,6 +654,15 @@ func _write_bit(ref: Dictionary, val: bool, mb: Node) -> void:
 		mb.call("set_coil", idx, val)
 	elif area == "M":
 		memory_bits[idx] = val
+
+
+func _write_word(ref: Dictionary, val: int, mb: Node) -> void:
+	var area: String = ref["area"]
+	var idx: int = ref["idx"]
+	if area == "QW":
+		mb.call("set_holding_register", idx, val)
+	elif area == "MW" and idx >= 0 and idx < MAX_WORDS:
+		memory_words[idx] = val & 0xFFFF
 
 
 func _read_word(ref: Dictionary, mb: Node) -> int:

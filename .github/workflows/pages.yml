@@ -1,0 +1,65 @@
+name: Deploy Web to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_STATUS: "stable"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot and Export Templates
+        run: |
+          TAG="${GODOT_VERSION}-${GODOT_STATUS}"
+          FILE_VER="${GODOT_VERSION}-${GODOT_STATUS}"
+          TEMPLATE_DIR="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          mkdir -p "${TEMPLATE_DIR}" /tmp/godot
+
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${TAG}/Godot_v${FILE_VER}_linux.x86_64.zip" -o /tmp/godot/godot.zip
+          unzip -q /tmp/godot/godot.zip -d /tmp/godot
+          mv "/tmp/godot/Godot_v${FILE_VER}_linux.x86_64" /usr/local/bin/godot || sudo mv "/tmp/godot/Godot_v${FILE_VER}_linux.x86_64" /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${TAG}/Godot_v${FILE_VER}_export_templates.tpz" -o /tmp/godot/templates.tpz
+          unzip -q /tmp/godot/templates.tpz -d /tmp/godot/tpl
+          mv /tmp/godot/tpl/templates/* "${TEMPLATE_DIR}/"
+          rm -rf /tmp/godot
+
+      - name: Export Web build
+        run: |
+          mkdir -p build/web
+          godot --headless --export-release "Web" build/web/index.html
+          touch build/web/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

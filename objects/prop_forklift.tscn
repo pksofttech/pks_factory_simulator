@@ -1,0 +1,168 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.95, 0.56, 0.08, 1)
+metallic = 0.25
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+albedo_color = Color(0.14, 0.16, 0.19, 1)
+metallic = 0.65
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="mat_tire"]
+albedo_color = Color(0.08, 0.08, 0.09, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.55, 0.58, 0.62, 1)
+metallic = 0.8
+roughness = 0.3
+
+[sub_resource type="BoxMesh" id="mesh_chassis"]
+size = Vector3(1.06, 0.55, 1.35)
+
+[sub_resource type="BoxMesh" id="mesh_counterweight"]
+size = Vector3(1.04, 0.68, 0.42)
+
+[sub_resource type="BoxMesh" id="mesh_hood"]
+size = Vector3(0.86, 0.24, 0.72)
+
+[sub_resource type="BoxMesh" id="mesh_seat_base"]
+size = Vector3(0.46, 0.12, 0.44)
+
+[sub_resource type="BoxMesh" id="mesh_seat_back"]
+size = Vector3(0.46, 0.46, 0.1)
+
+[sub_resource type="BoxMesh" id="mesh_rops_post"]
+size = Vector3(0.06, 1.15, 0.06)
+
+[sub_resource type="BoxMesh" id="mesh_rops_roof"]
+size = Vector3(0.96, 0.05, 1.08)
+
+[sub_resource type="BoxMesh" id="mesh_mast_rail"]
+size = Vector3(0.09, 1.9, 0.11)
+
+[sub_resource type="BoxMesh" id="mesh_carriage"]
+size = Vector3(0.88, 0.42, 0.07)
+
+[sub_resource type="BoxMesh" id="mesh_fork"]
+size = Vector3(0.11, 0.045, 0.95)
+
+[sub_resource type="CylinderMesh" id="mesh_wheel_front"]
+top_radius = 0.26
+bottom_radius = 0.26
+height = 0.18
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="mesh_wheel_rear"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 0.15
+radial_segments = 16
+
+[sub_resource type="BoxShape3D" id="shape_forklift"]
+size = Vector3(1.2, 2.05, 2.2)
+
+[node name="Forklift" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.025, 0)
+shape = SubResource("shape_forklift")
+
+[node name="Chassis" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, -0.22)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_chassis")
+
+[node name="Counterweight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, -0.82)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_counterweight")
+
+[node name="EngineHood" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, -0.35)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_hood")
+
+[node name="SeatBase" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.99, -0.25)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_seat_base")
+
+[node name="SeatBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.24, -0.45)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_seat_back")
+
+[node name="PostFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.43, 1.38, 0.25)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_rops_post")
+
+[node name="PostFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.43, 1.38, 0.25)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_rops_post")
+
+[node name="PostBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.43, 1.38, -0.72)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_rops_post")
+
+[node name="PostBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.43, 1.38, -0.72)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_rops_post")
+
+[node name="RoofGuard" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.98, -0.24)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_rops_roof")
+
+[node name="MastL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.34, 1.1, 0.5)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_mast_rail")
+
+[node name="MastR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 1.1, 0.5)
+material_override = SubResource("mat_dark")
+mesh = SubResource("mesh_mast_rail")
+
+[node name="Carriage" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, 0.58)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_carriage")
+
+[node name="ForkL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.24, 0.08, 1.05)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_fork")
+
+[node name="ForkR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, 0.08, 1.05)
+material_override = SubResource("mat_steel")
+mesh = SubResource("mesh_fork")
+
+[node name="WheelFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.52, 0.26, 0.24)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_wheel_front")
+
+[node name="WheelFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.52, 0.26, 0.24)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_wheel_front")
+
+[node name="WheelBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.49, 0.2, -0.75)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_wheel_rear")
+
+[node name="WheelBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.49, 0.2, -0.75)
+material_override = SubResource("mat_tire")
+mesh = SubResource("mesh_wheel_rear")

@@ -1,0 +1,186 @@
+{
+  "format": "pks_factory_project",
+  "ladder": {
+    "code": "// Example 1: Automated Vision Sorting Line\n// Y0=MainConveyor, Y1=BoxEmitter, Y2=DivertPusher, Y3=GreenLamp\n// X0=EntrySensor, X1=VisionSensor\nLD X0\nORN X0\nOUT Y0\nOUT Y1\nOUT Y3\nLD X1\nOUT Y2\nEND\n",
+    "enabled": true
+  },
+  "objects": [
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "conveyor",
+      "modbus_coil": 0,
+      "modbus_input": -1,
+      "name": "MainConveyor",
+      "reversed": false,
+      "rotation": 0.0,
+      "speed": 1.8,
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "box_mode": 5,
+      "height_offset": 0.0,
+      "kind": "emitter",
+      "modbus_coil": 1,
+      "modbus_input": -1,
+      "name": "BoxEmitter",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -3.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "sensor",
+      "modbus_coil": -1,
+      "modbus_input": 0,
+      "name": "EntrySensor",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -1.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "detect_mode": 2,
+      "height_offset": 0.0,
+      "kind": "vision_sensor",
+      "modbus_coil": -1,
+      "modbus_holding_reg": -1,
+      "modbus_input": 1,
+      "modbus_input_reg": -1,
+      "name": "VisionSensor",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "pusher",
+      "modbus_coil": 2,
+      "modbus_input": -1,
+      "name": "DivertPusher",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 1.5,
+      "z": -1.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "reject_bin",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "RejectBin",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 1.5,
+      "z": 1.25
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "remover",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "BoxRemover",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 4.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "stack_light",
+      "modbus_coil": 3,
+      "modbus_input": -1,
+      "name": "StackLight",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -4.2,
+      "z": -1.4
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_qc_desk",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "QCDesk",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.5,
+      "z": -3.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_pallet_stack",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "PalletStack",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 4.2,
+      "z": 2.4
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_forklift",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "Forklift",
+      "reversed": false,
+      "rotation": 90.0,
+      "x": 6.5,
+      "z": 2.4
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_barrier",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "SafetyBarrier1",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -2.0,
+      "z": 2.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_bollard",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "SafetyBollard",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 4.8,
+      "z": -1.2
+    }
+  ],
+  "plc": {
+    "modbus_enabled": false,
+    "plc_mode": true,
+    "plc_notation": "mitsubishi"
+  },
+  "project_version": 1,
+  "ui": {
+    "decor_style": "factory",
+    "grid_step": 0.5,
+    "show_edit_grid": false
+  },
+  "version": 1,
+  "workspace": {
+    "depth": 40,
+    "width": 40
+  }
+}

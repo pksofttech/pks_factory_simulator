@@ -86,32 +86,32 @@ func _build_streams() -> void:
 	_streams["emit"] = _make_one_shot(0.14, 260.0, 120.0, 0.85, 0.25)
 	_streams["remove"] = _make_one_shot(0.16, 560.0, 360.0, 0.78, 0.12)
 	_streams["alarm"] = _make_one_shot(0.24, 880.0, 880.0, 0.85, 0.0)
-	_streams["npc_chat"] = _make_alien_chat(0.26, 620.0, 1080.0, 36.0)
-	_streams["npc_chat_reply"] = _make_alien_chat(0.26, 860.0, 540.0, 44.0)
-	_streams["npc_check"] = _make_one_shot(0.05, 680.0, 820.0, 0.40, 0.0)
-	_streams["safety_alert"] = _make_one_shot(0.18, 980.0, 760.0, 0.65, 0.0)
+	_streams["npc_chat"] = _make_soft_chirp_chat(0.28, 380.0, 560.0, 3, 18.0)
+	_streams["npc_chat_2"] = _make_soft_chirp_chat(0.30, 440.0, 620.0, 4, 22.0)
+	_streams["npc_chat_reply"] = _make_soft_chirp_chat(0.26, 520.0, 360.0, 3, 16.0)
+	_streams["npc_check"] = _make_one_shot(0.06, 520.0, 660.0, 0.34, 0.0)
+	_streams["npc_log"] = _make_one_shot(0.05, 420.0, 300.0, 0.30, 0.04)
+	_streams["npc_warn"] = _make_one_shot(0.14, 740.0, 580.0, 0.45, 0.0)
+	_streams["safety_alert"] = _make_one_shot(0.18, 860.0, 640.0, 0.50, 0.0)
 
 
-func _make_alien_chat(dur: float, f_a: float, f_b: float, fm_rate: float) -> AudioStreamWAV:
+func _make_soft_chirp_chat(dur: float, f_a: float, f_b: float, syllables: int, mod_rate: float) -> AudioStreamWAV:
 	var count := int(SAMPLE_RATE * dur)
 	var data := PackedByteArray()
 	data.resize(count * 2)
 	var phase := 0.0
+	var syl := maxi(2, syllables)
 	for i in range(count):
 		var u := float(i) / float(max(1, count - 1))
 		var t := float(i) / float(SAMPLE_RATE)
-		# 3 quick sci-fi syllables with vibrato warble
-		var gate := 0.0
-		if u < 0.28:
-			gate = sin(PI * (u / 0.28))
-		elif u > 0.34 and u < 0.64:
-			gate = sin(PI * ((u - 0.34) / 0.30))
-		elif u > 0.70:
-			gate = sin(PI * ((u - 0.70) / 0.30))
-		var base_f := lerpf(f_a, f_b, u)
-		var warble := sin(TAU * fm_rate * t) * 180.0
+		var syl_u := fmod(u * float(syl), 1.0)
+		var gate := pow(sin(PI * syl_u), 1.5) if syl_u < 0.82 else 0.0
+		var syl_idx := int(floor(u * float(syl)))
+		var step_pitch := 1.0 + 0.12 * sin(float(syl_idx) * 2.1)
+		var base_f := lerpf(f_a, f_b, u) * step_pitch
+		var warble := sin(TAU * mod_rate * t) * 42.0
 		phase += TAU * maxf(180.0, base_f + warble) / float(SAMPLE_RATE)
-		var sample := clampf((sin(phase) * 0.65 + sin(phase * 1.5) * 0.22) * gate, -0.95, 0.95)
+		var sample := clampf((sin(phase) * 0.62 + sin(phase * 2.0) * 0.16) * gate * 0.72, -0.95, 0.95)
 		data.encode_s16(i * 2, int(round(sample * 32767.0)))
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS

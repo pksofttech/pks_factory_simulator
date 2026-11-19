@@ -591,7 +591,7 @@ material_override = SubResource("StandardMaterial3D_btn_red")
 mesh = SubResource("CylinderMesh_estop")
 
 [node name="Nameplate" type="MeshInstance3D" parent="." unique_id=98476925]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.715, 0.274)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.735, 0.274)
 material_override = SubResource("StandardMaterial3D_nameplate")
 mesh = SubResource("BoxMesh_nameplate")
 

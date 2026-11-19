@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.28, 0.32, 0.37, 1)
+metallic = 0.5
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="mat_door"]
+albedo_color = Color(0.2, 0.42, 0.65, 1)
+metallic = 0.4
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="mat_handle"]
+albedo_color = Color(0.75, 0.78, 0.82, 1)
+metallic = 0.8
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="mat_helmet"]
+albedo_color = Color(0.95, 0.76, 0.1, 1)
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="mesh_cabinet"]
+size = Vector3(1.18, 1.82, 0.48)
+
+[sub_resource type="BoxMesh" id="mesh_door"]
+size = Vector3(0.36, 1.66, 0.03)
+
+[sub_resource type="BoxMesh" id="mesh_handle"]
+size = Vector3(0.025, 0.14, 0.03)
+
+[sub_resource type="SphereMesh" id="mesh_helmet"]
+radius = 0.14
+height = 0.16
+radial_segments = 14
+rings = 8
+
+[sub_resource type="BoxShape3D" id="shape_locker"]
+size = Vector3(1.2, 1.9, 0.5)
+
+[node name="LockerStation" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("shape_locker")
+
+[node name="CabinetBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, -0.01)
+material_override = SubResource("mat_body")
+mesh = SubResource("mesh_cabinet")
+
+[node name="DoorL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.39, 0.92, 0.23)
+material_override = SubResource("mat_door")
+mesh = SubResource("mesh_door")
+
+[node name="DoorC" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0.23)
+material_override = SubResource("mat_door")
+mesh = SubResource("mesh_door")
+
+[node name="DoorR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.39, 0.92, 0.23)
+material_override = SubResource("mat_door")
+mesh = SubResource("mesh_door")
+
+[node name="HandleL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.26, 0.96, 0.25)
+material_override = SubResource("mat_handle")
+mesh = SubResource("mesh_handle")
+
+[node name="HandleC" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.96, 0.25)
+material_override = SubResource("mat_handle")
+mesh = SubResource("mesh_handle")
+
+[node name="HandleR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.52, 0.96, 0.25)
+material_override = SubResource("mat_handle")
+mesh = SubResource("mesh_handle")
+
+[node name="SafetyHelmet" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 1.88, 0.02)
+material_override = SubResource("mat_helmet")
+mesh = SubResource("mesh_helmet")

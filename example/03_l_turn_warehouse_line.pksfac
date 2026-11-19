@@ -1,0 +1,172 @@
+{
+  "format": "pks_factory_project",
+  "ladder": {
+    "code": "// Example 3: 90-deg L-Turn & Safety Curtain Line\n// X0=PreTurnSensor, X1=LightCurtain\n// Y0=InfeedConveyor, Y1=BoxEmitter, Y2=CornerTurn, Y3=BranchConveyor\nLDN X1\nOUT Y0\nOUT Y1\nOUT Y2\nOUT Y3\nEND\n",
+    "enabled": true
+  },
+  "objects": [
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "conveyor",
+      "modbus_coil": 0,
+      "modbus_input": -1,
+      "name": "InfeedConveyor",
+      "reversed": false,
+      "rotation": 0.0,
+      "speed": 1.8,
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "box_mode": 0,
+      "height_offset": 0.0,
+      "kind": "emitter",
+      "modbus_coil": 1,
+      "modbus_input": -1,
+      "name": "BoxEmitter",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -3.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "sensor",
+      "modbus_coil": -1,
+      "modbus_input": 0,
+      "name": "PreTurnSensor",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 2.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "turn",
+      "modbus_coil": 2,
+      "modbus_input": -1,
+      "name": "CornerTurn",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 5.25,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "conveyor",
+      "modbus_coil": 3,
+      "modbus_input": -1,
+      "name": "BranchConveyor",
+      "reversed": false,
+      "rotation": -90.0,
+      "speed": 1.8,
+      "x": 5.25,
+      "z": 5.25
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "remover",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "DispatchRemover",
+      "reversed": false,
+      "rotation": -90.0,
+      "x": 5.25,
+      "z": 9.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "light_curtain",
+      "modbus_coil": -1,
+      "modbus_input": 1,
+      "name": "SafetyCurtain",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_rack",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "WarehouseRack1",
+      "reversed": false,
+      "rotation": 90.0,
+      "x": 8.0,
+      "z": 3.5
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_pallet_stack",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "DispatchPallets",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 7.5,
+      "z": 8.5
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_pallet_jack",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "PalletJack",
+      "reversed": false,
+      "rotation": 180.0,
+      "x": 3.2,
+      "z": 8.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_locker",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "StaffLocker",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -4.5,
+      "z": -3.5
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_bollard",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "CornerBollard",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 3.8,
+      "z": 1.6
+    }
+  ],
+  "plc": {
+    "modbus_enabled": false,
+    "plc_mode": true,
+    "plc_notation": "mitsubishi"
+  },
+  "project_version": 1,
+  "ui": {
+    "decor_style": "factory",
+    "grid_step": 0.5,
+    "show_edit_grid": false
+  },
+  "version": 1,
+  "workspace": {
+    "depth": 40,
+    "width": 40
+  }
+}

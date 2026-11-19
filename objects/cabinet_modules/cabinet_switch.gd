@@ -26,6 +26,7 @@ signal position_changed(pos: int, io_id: String)
 			_update_knob()
 
 var _syncing_props := false
+var _ping_dir := 1
 
 @export var switch_pos: int = 0:
 	set(value):
@@ -33,7 +34,7 @@ var _syncing_props := false
 		switch_pos = clampi(value, 0, max_p)
 		if not _syncing_props:
 			_syncing_props = true
-			active = (switch_pos != 0) if positions == 2 else (switch_pos == 2)
+			active = (switch_pos != 0) if positions == 2 else (switch_pos != 1)
 			_syncing_props = false
 		if is_node_ready():
 			_update_knob()
@@ -74,9 +75,11 @@ func _on_area_input(_cam: Node, event: InputEvent, _pos: Vector3, _norm: Vector3
 	if event is InputEventMouseButton and event.pressed and _can_click():
 		if positions == 3:
 			if event.button_index == MOUSE_BUTTON_LEFT:
-				switch_pos = (switch_pos + 1) % 3
-			elif event.button_index == MOUSE_BUTTON_RIGHT:
-				switch_pos = posmod(switch_pos - 1, 3)
+				if switch_pos <= 0:
+					_ping_dir = 1
+				elif switch_pos >= 2:
+					_ping_dir = -1
+				switch_pos += _ping_dir
 			else:
 				return
 			_play_click()

@@ -4,11 +4,14 @@ extends Node3D
 @export var inspect_duration: float = 2.2
 @export var is_tester: bool = false
 @export var is_safety: bool = false
+@export var role_id: String = ""
 @export var start_target_offset: int = 0
 @export var chat_enabled: bool = true
+@export var sound_enabled: bool = true
 
 const CELL_SIZE := 0.5
 const NPC_CLEARANCE := 0.55
+const PRODUCT_KINDS := ["box", "box_plastic", "box_small", "box_metal", "pallet", "workpiece"]
 const CHAT_PAIRS := [
 	["Line running smooth!", "Good job, carry on!"],
 	["Conveyors checked!", "Keep an eye on Turn!"],
@@ -38,6 +41,10 @@ var _last_pos: Vector3 = Vector3.ZERO
 var _was_edit_mode: bool = false
 var _current_target: Node3D = null
 var _alert_check_timer: float = 0.0
+var _empty_refresh_timer: float = 0.0
+var _rounds_completed: int = 0
+var _on_shift_break: bool = false
+var _break_station: Node3D = null
 var _last_status_text: String = ""
 var _last_status_color: Color = Color.TRANSPARENT
 var _astar := AStarGrid2D.new()
@@ -99,6 +106,30 @@ func _get_equipment_half_extents(obj: Node3D) -> Vector2:
 			return Vector2(0.35, 0.80)
 		"cabinet":
 			return Vector2(0.55, 0.45)
+		"prop_rack":
+			return Vector2(1.00, 0.50)
+		"prop_barrier":
+			return Vector2(0.75, 0.12)
+		"prop_barrel":
+			return Vector2(0.35, 0.35)
+		"prop_workbench":
+			return Vector2(0.80, 0.40)
+		"prop_forklift":
+			return Vector2(0.60, 1.10)
+		"prop_pallet_stack":
+			return Vector2(0.55, 0.55)
+		"prop_pallet_jack":
+			return Vector2(0.31, 0.75)
+		"prop_bollard":
+			return Vector2(0.16, 0.16)
+		"prop_safety_sign":
+			return Vector2(0.28, 0.28)
+		"prop_qc_desk":
+			return Vector2(0.70, 0.38)
+		"prop_production_board":
+			return Vector2(0.80, 0.28)
+		"prop_locker":
+			return Vector2(0.60, 0.25)
 		_:
 			return Vector2(0.75, 0.75)
 
@@ -132,7 +163,7 @@ func _rebuild_nav_grid(avoid_npcs: bool = false) -> void:
 			continue
 		var node := obj as Node3D
 		var kind := str(node.get_meta("kind", ""))
-		if kind in ["box", "box_plastic", "light_curtain"]:
+		if kind in PRODUCT_KINDS or kind == "light_curtain":
 			continue
 		var ext := _get_equipment_half_extents(node) + Vector2(NPC_CLEARANCE, NPC_CLEARANCE)
 		var inv := node.global_transform.affine_inverse()
@@ -170,6 +201,10 @@ func _clamp_cell(cell: Vector2i) -> Vector2i:
 	)
 
 func _matches_role(kind: String) -> bool:
+	if role_id == "maintenance":
+		return kind in ["pump", "motor_fan", "solenoid_valve", "water_tank", "pusher", "stopper"]
+	if role_id == "qc":
+		return kind in ["vision_sensor", "rgb_sensor", "reject_bin", "remover", "sensor"]
 	if is_safety:
 		return kind in ["light_curtain", "stack_light", "cabinet", "remover", "reject_bin", "motor_fan", "pump"]
 	if is_tester:
@@ -191,7 +226,7 @@ func _refresh_targets() -> void:
 		if not is_instance_valid(obj) or not (obj is Node3D):
 			continue
 		var kind := str(obj.get_meta("kind", ""))
-		if kind in ["box", "box_plastic"]:
+		if kind in PRODUCT_KINDS or kind.begins_with("prop_"):
 			continue
 		all_equip.append(obj as Node3D)
 		if _matches_role(kind):
@@ -203,8 +238,40 @@ func _refresh_targets() -> void:
 		_target_idx = _target_idx % _targets.size()
 		_current_target = _targets[_target_idx]
 		_pick_stand_position(_current_target)
+	else:
+		_current_target = null
+		_inspecting = false
+		_waypoints.clear()
+
+func _find_shift_break_station() -> Node3D:
+	var preferred: Array = (
+		["prop_workbench", "prop_locker", "prop_production_board"]
+		if role_id == "maintenance"
+		else (
+			["prop_qc_desk", "prop_production_board", "prop_workbench"]
+			if role_id == "qc"
+			else (
+				["prop_production_board", "prop_safety_sign", "prop_locker"]
+				if is_safety
+				else (["prop_qc_desk", "prop_production_board"] if is_tester else ["prop_workbench", "prop_locker", "prop_qc_desk"])
+			)
+		)
+	)
+	for want_kind in preferred:
+		for obj in get_tree().get_nodes_in_group("sandbox_objects"):
+			if not is_instance_valid(obj) or not (obj is Node3D):
+				continue
+			if str(obj.get_meta("kind", "")) == want_kind:
+				return obj as Node3D
+	return null
+
 
 func _advance_to_next_target() -> void:
+	if _on_shift_break:
+		_on_shift_break = false
+		_break_station = null
+		_refresh_targets()
+		return
 	if _targets.is_empty():
 		_refresh_targets()
 		return
@@ -213,6 +280,18 @@ func _advance_to_next_target() -> void:
 			var next_idx := (_target_idx + 1) % _targets.size()
 			if next_idx == 0 and pass_idx == 0:
 				_target_idx = 0
+				_rounds_completed += 1
+				if _rounds_completed % 2 == 0:
+					var station := _find_shift_break_station()
+					if is_instance_valid(station):
+						_on_shift_break = true
+						_break_station = station
+						_current_target = station
+						_inspecting = false
+						if _pick_stand_position(station):
+							return
+						_on_shift_break = false
+						_break_station = null
 				_refresh_targets()
 				return
 			_target_idx = next_idx
@@ -344,11 +423,19 @@ func _physics_process(delta: float) -> void:
 		_chat_cooldown = maxf(0.0, _chat_cooldown - delta)
 	if _replan_cooldown > 0.0:
 		_replan_cooldown = maxf(0.0, _replan_cooldown - delta)
-	if _targets.is_empty():
-		_refresh_targets()
+	if _targets.is_empty() and not _on_shift_break:
+		_animate_idle(delta)
+		_set_status_label("Standby (No Equipment)", Color("9cb3c4"))
+		_empty_refresh_timer += delta
+		if _empty_refresh_timer >= 1.0:
+			_empty_refresh_timer = 0.0
+			_refresh_targets()
 		return
-	var target := _targets[_target_idx]
+	_empty_refresh_timer = 0.0
+	var target: Node3D = _break_station if _on_shift_break else _targets[_target_idx]
 	if not is_instance_valid(target):
+		_on_shift_break = false
+		_break_station = null
 		_refresh_targets()
 		return
 
@@ -462,10 +549,27 @@ func _try_start_chat() -> bool:
 		if d < 1.05:
 			var pair: Array = CHAT_PAIRS[_chat_seq % CHAT_PAIRS.size()]
 			_chat_seq += 1
-			var my_line: String = ("Safety: PPE & zones clear!" if is_safety else (("Sup: " + str(pair[1])) if is_tester else ("Op: " + str(pair[0]))))
+			var my_line: String = (
+				"Maint: Motors & valves nominal!"
+				if role_id == "maintenance"
+				else (
+					"QC: Quality checks on track!"
+					if role_id == "qc"
+					else ("Safety: PPE & zones clear!" if is_safety else (("Sup: " + str(pair[1])) if is_tester else ("Op: " + str(pair[0]))))
+				)
+			)
 			var partner_is_tester := bool(partner.get("is_tester"))
 			var partner_is_safety := bool(partner.get("is_safety"))
-			var partner_line: String = ("Safety: Keep aisle clear!" if partner_is_safety else (("Sup: " + str(pair[1])) if partner_is_tester else ("Op: " + str(pair[0]))))
+			var partner_role := str(partner.get("role_id"))
+			var partner_line: String = (
+				"Maint: Tools & pumps good!"
+				if partner_role == "maintenance"
+				else (
+					"QC: Specs look solid!"
+					if partner_role == "qc"
+					else ("Safety: Keep aisle clear!" if partner_is_safety else (("Sup: " + str(pair[1])) if partner_is_tester else ("Op: " + str(pair[0]))))
+				)
+			)
 			start_chat(partner, my_line, 2.2, false)
 			if partner.has_method("start_chat"):
 				partner.call("start_chat", self, partner_line, 2.2, true)
@@ -481,23 +585,44 @@ func start_chat(partner: Node3D, text_line: String, duration: float = 2.2, is_re
 	_chat_text = text_line
 	_chat_timer = duration
 	_stuck_timer = 0.0
-	var pitch := 1.15 if is_safety else (0.88 if is_tester else 1.0)
+	var base_pitch := (
+		0.85
+		if role_id == "maintenance"
+		else (1.06 if role_id == "qc" else (1.12 if is_safety else (0.90 if is_tester else 1.0)))
+	)
+	var pitch := base_pitch + randf_range(-0.04, 0.04)
 	if is_reply:
 		get_tree().create_timer(0.28).timeout.connect(
 			func():
 				if is_instance_valid(self):
-					_play_npc_sound("npc_chat_reply", -4.0, pitch, 24.0),
+					_play_npc_sound("npc_chat_reply", -5.0, pitch, 24.0),
 		)
 	else:
-		_play_npc_sound("npc_chat", -4.0, pitch, 24.0)
+		var chat_id := "npc_chat" if (_chat_seq % 2 == 0) else "npc_chat_2"
+		_play_npc_sound(chat_id, -5.0, pitch, 24.0)
 
 func _start_inspecting(target: Node3D) -> void:
 	_inspecting = true
 	_inspect_timer = inspect_duration
 	_update_status_label(target, true)
-	_play_npc_sound("npc_check", -7.0, 1.0, 20.0)
+	var role_pitch := (
+		0.85
+		if role_id == "maintenance"
+		else (1.06 if role_id == "qc" else (1.12 if is_safety else (0.90 if is_tester else 1.0)))
+	)
+	if _on_shift_break and target == _break_station:
+		_play_npc_sound("npc_log", -7.5, role_pitch, 20.0)
+	else:
+		var kind := str(target.get_meta("kind", ""))
+		var is_warn := _is_target_alert(target) or (kind == "water_tank" and int(target.get("level_percent")) >= 85) or (kind == "reject_bin" and int(target.get("rejected_count")) >= 10)
+		if is_warn:
+			_play_npc_sound("npc_warn", -5.5, role_pitch, 24.0)
+		else:
+			_play_npc_sound("npc_check", -7.5, role_pitch, 20.0)
 
 func _play_npc_sound(sound_id: String, volume_db: float = -6.0, pitch: float = 1.0, max_dist: float = 22.0) -> void:
+	if not sound_enabled:
+		return
 	var fa := get_node_or_null("/root/FactoryAudio")
 	if fa != null:
 		fa.call("play_one_shot", self, sound_id, volume_db, max_dist, pitch)
@@ -553,7 +678,7 @@ func _push_out_of_equipment() -> void:
 			continue
 		var node := obj as Node3D
 		var kind := str(node.get_meta("kind", ""))
-		if kind in ["box", "box_plastic", "light_curtain"]:
+		if kind in PRODUCT_KINDS or kind == "light_curtain":
 			continue
 		var ext := _get_equipment_half_extents(node) + Vector2(0.38, 0.38)
 		var inv := node.global_transform.affine_inverse()
@@ -589,6 +714,7 @@ func _animate_walk(delta: float) -> void:
 		right_arm.rotation.x = (swing * 0.45) if is_tester else ((-0.55 + swing * 0.15) if is_safety else (swing * 0.25))
 	if head_node != null:
 		head_node.rotation.x = lerp(head_node.rotation.x, 0.0, clampf(delta * 6.0, 0.0, 1.0))
+		head_node.rotation.y = lerp(head_node.rotation.y, 0.0, clampf(delta * 6.0, 0.0, 1.0))
 
 func _find_safety_alert_target() -> Node3D:
 	for obj in get_tree().get_nodes_in_group("sandbox_objects"):
@@ -605,8 +731,23 @@ func _find_safety_alert_target() -> Node3D:
 			return obj as Node3D
 	return null
 
+func _is_target_alert(target: Node3D) -> bool:
+	if not is_instance_valid(target):
+		return false
+	var kind := str(target.get_meta("kind", ""))
+	if kind == "light_curtain" and bool(target.get("active")):
+		return true
+	if kind == "cabinet" and bool(target.get("estop_active")):
+		return true
+	if kind == "stack_light" and bool(target.get("lamp_red_on")):
+		return true
+	if kind == "water_tank" and bool(target.get("high_level")):
+		return true
+	return false
+
 func _animate_idle(delta: float) -> void:
 	_walk_phase += delta * 3.0
+	var alert_pose := is_safety and _inspecting and _is_target_alert(_current_target)
 	if left_leg != null:
 		left_leg.rotation.x = lerp(left_leg.rotation.x, 0.0, clampf(delta * 8.0, 0.0, 1.0))
 	if right_leg != null:
@@ -615,14 +756,31 @@ func _animate_idle(delta: float) -> void:
 		var target_l := -0.15
 		if is_safety and _inspecting:
 			target_l = -0.52 + sin(_walk_phase * 2.2) * 0.14
-		elif not is_tester and _inspecting:
-			target_l = -0.58 + sin(_walk_phase * 1.4) * 0.10
+		elif is_tester and _inspecting:
+			target_l = -0.48
+		elif _inspecting:
+			target_l = -0.58 + sin(_walk_phase * 1.8) * 0.14
 		left_arm.rotation.x = lerp(left_arm.rotation.x, target_l, clampf(delta * 6.0, 0.0, 1.0))
 	if right_arm != null:
 		var target_r := -0.12 if is_tester else (-0.78 if is_safety else -0.16)
+		if alert_pose:
+			target_r = -1.25 + sin(_walk_phase * 4.5) * 0.25
+		elif is_tester and _inspecting:
+			target_r = -0.55 + sin(_walk_phase * 3.5) * 0.14
+		elif _inspecting and not is_safety:
+			target_r = -0.45 + cos(_walk_phase * 1.8) * 0.12
+		elif not _inspecting and not _chatting and fmod(_walk_phase, 18.0) < 3.5:
+			target_r = -1.85 + sin(_walk_phase * 3.2) * 0.25
 		right_arm.rotation.x = lerp(right_arm.rotation.x, target_r, clampf(delta * 6.0, 0.0, 1.0))
 	if head_node != null:
-		head_node.rotation.x = sin(_walk_phase) * 0.12 + 0.08
+		var target_hx := sin(_walk_phase) * 0.12 + 0.08
+		var target_hy := 0.0
+		if is_tester and _inspecting:
+			target_hx = 0.18 + sin(_walk_phase * 2.0) * 0.08
+		elif not _inspecting and not _chatting:
+			target_hy = sin(_walk_phase * 0.55) * 0.42
+		head_node.rotation.x = lerp(head_node.rotation.x, target_hx, clampf(delta * 6.0, 0.0, 1.0))
+		head_node.rotation.y = lerp(head_node.rotation.y, target_hy, clampf(delta * 5.0, 0.0, 1.0))
 
 func _set_status_label(txt: String, col: Color) -> void:
 	if status_label == null:
@@ -643,13 +801,36 @@ func _update_status_label(target: Node3D, checking: bool) -> void:
 	if scene != null and scene.has_method("_is_object_active"):
 		is_active = bool(scene.call("_is_object_active", target))
 	var kind := str(target.get_meta("kind", ""))
+	if _on_shift_break and target == _break_station:
+		if checking:
+			var msg := "Updating KPI board..." if kind == "prop_production_board" else ("Logging QC report..." if kind == "prop_qc_desk" else ("Quick shift break" if kind == "prop_locker" else "Checking tools..."))
+			_set_status_label(msg, Color("9ad4ff"))
+		else:
+			_set_status_label("Break -> %s" % target.name, Color("9ad4ff"))
+		return
 	var state_str := "ACTIVE" if is_active else "OK"
 	if kind == "water_tank":
-		state_str = "%d%%" % int(target.get("level_percent"))
+		var lvl := int(target.get("level_percent"))
+		state_str = ("%d%% HIGH!" % lvl) if lvl >= 85 else ("%d%%" % lvl)
 	elif kind == "remover":
-		state_str = "CNT:%d" % int(target.get("removed_count"))
+		state_str = "OUT:%d" % int(target.get("removed_count"))
 	elif kind == "reject_bin":
-		state_str = "REJ:%d" % int(target.get("rejected_count"))
+		var rej := int(target.get("rejected_count"))
+		state_str = ("REJ:%d HIGH" % rej) if rej >= 10 else ("REJ:%d" % rej)
+	elif kind in ["conveyor", "conveyor_short"]:
+		state_str = "RUN" if is_active else "STOP"
+	if role_id == "maintenance":
+		if checking:
+			_set_status_label("Maint Check: %s [%s]" % [target.name, state_str], Color("ffb85c") if is_active else Color("ffd08a"))
+		else:
+			_set_status_label("Maint -> %s" % target.name, Color("ffd08a"))
+		return
+	if role_id == "qc":
+		if checking:
+			_set_status_label("QC Inspect: %s [%s]" % [target.name, state_str], Color("6ce5ff") if is_active else Color("9beeff"))
+		else:
+			_set_status_label("QC -> %s" % target.name, Color("9beeff"))
+		return
 	if is_safety:
 		if kind == "light_curtain" and is_active:
 			_set_status_label("ALERT: %s TRIPPED!" % target.name, Color("ff6b6b"))

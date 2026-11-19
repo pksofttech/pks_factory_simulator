@@ -1,0 +1,111 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_frame"]
+albedo_color = Color(0.18, 0.21, 0.25, 1)
+metallic = 0.65
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="mat_top"]
+albedo_color = Color(0.8, 0.82, 0.85, 1)
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="mat_screen"]
+albedo_color = Color(0.08, 0.22, 0.38, 1)
+emission_enabled = true
+emission = Color(0.12, 0.35, 0.58, 1)
+emission_energy_multiplier = 0.6
+roughness = 0.25
+
+[sub_resource type="StandardMaterial3D" id="mat_box"]
+albedo_color = Color(0.74, 0.58, 0.38, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="mesh_leg"]
+size = Vector3(0.055, 0.82, 0.055)
+
+[sub_resource type="BoxMesh" id="mesh_top"]
+size = Vector3(1.4, 0.05, 0.76)
+
+[sub_resource type="BoxMesh" id="mesh_shelf"]
+size = Vector3(1.3, 0.03, 0.66)
+
+[sub_resource type="BoxMesh" id="mesh_stand"]
+size = Vector3(0.08, 0.16, 0.06)
+
+[sub_resource type="BoxMesh" id="mesh_monitor_frame"]
+size = Vector3(0.64, 0.38, 0.04)
+
+[sub_resource type="BoxMesh" id="mesh_monitor_screen"]
+size = Vector3(0.58, 0.32, 0.01)
+
+[sub_resource type="BoxMesh" id="mesh_keyboard"]
+size = Vector3(0.42, 0.02, 0.15)
+
+[sub_resource type="BoxMesh" id="mesh_sample_box"]
+size = Vector3(0.28, 0.2, 0.28)
+
+[sub_resource type="BoxShape3D" id="shape_qc_desk"]
+size = Vector3(1.4, 1.38, 0.76)
+
+[node name="QCDesk" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.69, 0)
+shape = SubResource("shape_qc_desk")
+
+[node name="LegFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.64, 0.41, 0.32)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.64, 0.41, 0.32)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.64, 0.41, -0.32)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="LegBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.64, 0.41, -0.32)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_leg")
+
+[node name="TableTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.845, 0)
+material_override = SubResource("mat_top")
+mesh = SubResource("mesh_top")
+
+[node name="LowerShelf" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.24, 0)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_shelf")
+
+[node name="MonitorStand" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.95, -0.2)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_stand")
+
+[node name="MonitorFrame" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 1.16, -0.2)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_monitor_frame")
+
+[node name="MonitorScreen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 1.16, -0.175)
+material_override = SubResource("mat_screen")
+mesh = SubResource("mesh_monitor_screen")
+
+[node name="Keyboard" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.88, 0.08)
+material_override = SubResource("mat_frame")
+mesh = SubResource("mesh_keyboard")
+
+[node name="SampleBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.38, 0.97, 0.04)
+material_override = SubResource("mat_box")
+mesh = SubResource("mesh_sample_box")

@@ -1,0 +1,71 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(0.96, 0.78, 0.1, 1)
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="mat_black"]
+albedo_color = Color(0.12, 0.12, 0.14, 1)
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="mat_red"]
+albedo_color = Color(0.84, 0.16, 0.14, 1)
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="mesh_panel"]
+size = Vector3(0.46, 0.88, 0.03)
+
+[sub_resource type="BoxMesh" id="mesh_hinge"]
+size = Vector3(0.46, 0.04, 0.07)
+
+[sub_resource type="BoxMesh" id="mesh_badge"]
+size = Vector3(0.24, 0.24, 0.012)
+
+[sub_resource type="BoxMesh" id="mesh_band"]
+size = Vector3(0.36, 0.07, 0.012)
+
+[sub_resource type="BoxShape3D" id="shape_sign"]
+size = Vector3(0.56, 0.9, 0.56)
+
+[node name="SafetySign" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("shape_sign")
+
+[node name="PanelFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 0.43, 0.15)
+material_override = SubResource("mat_yellow")
+mesh = SubResource("mesh_panel")
+
+[node name="PanelBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, -0.34202, 0, 0.34202, 0.939693, 0, 0.43, -0.15)
+material_override = SubResource("mat_yellow")
+mesh = SubResource("mesh_panel")
+
+[node name="TopHinge" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.86, 0)
+material_override = SubResource("mat_yellow")
+mesh = SubResource("mesh_hinge")
+
+[node name="WarningDiamondFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, -0.707107, 0, 0.664463, 0.664463, 0.34202, -0.241845, -0.241845, 0.939693, 0, 0.56, 0.125)
+material_override = SubResource("mat_red")
+mesh = SubResource("mesh_badge")
+
+[node name="WarningBandFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 0.3, 0.22)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_band")
+
+[node name="WarningDiamondBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, -0.707107, 0, 0.664463, 0.664463, -0.34202, 0.241845, 0.241845, 0.939693, 0, 0.56, -0.125)
+material_override = SubResource("mat_red")
+mesh = SubResource("mesh_badge")
+
+[node name="WarningBandBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.939693, -0.34202, 0, 0.34202, 0.939693, 0, 0.3, -0.22)
+material_override = SubResource("mat_black")
+mesh = SubResource("mesh_band")

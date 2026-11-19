@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://objects/cabinet_modules/cabinet_dpm.gd" id="1_dpm_gd"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bezel"]
+albedo_color = Color(0.11, 0.13, 0.16, 1)
+metallic = 0.45
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_bezel"]
+size = Vector3(0.078, 0.048, 0.008)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_screen"]
+albedo_color = Color(0.015, 0.02, 0.025, 1)
+metallic = 0.05
+roughness = 0.18
+clearcoat_enabled = true
+clearcoat = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_screen"]
+size = Vector3(0.068, 0.038, 0.004)
+
+[node name="CabinetDPM" type="Node3D"]
+script = ExtResource("1_dpm_gd")
+
+[node name="Bezel" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.003)
+material_override = SubResource("StandardMaterial3D_bezel")
+mesh = SubResource("BoxMesh_bezel")
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.0055)
+material_override = SubResource("StandardMaterial3D_screen")
+mesh = SubResource("BoxMesh_screen")
+
+[node name="ValueLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0.0085)
+pixel_size = 0.00095
+modulate = Color(1, 0.231373, 0.188235, 1)
+text = "0"
+font_size = 24
+outline_size = 0
+
+[node name="UnitLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.012, 0.0085)
+visible = false
+pixel_size = 0.0008
+modulate = Color(1, 0.45, 0.4, 1)
+text = ""
+font_size = 13
+outline_size = 0
+
+[node name="Tag" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.054, 0.003)
+pixel_size = 0.0011
+modulate = Color(0.08, 0.1, 0.14, 1)
+text = "DPM"
+font_size = 24
+outline_size = 0

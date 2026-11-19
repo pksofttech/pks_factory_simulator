@@ -5,6 +5,7 @@ extends Node
 ## and writes packed Discrete Inputs (bits 0..63) to Holding Registers 0..3 via FC16.
 
 enum Mode { SERVER, CLIENT }
+enum AddressProfile { STANDARD_OPENPLC, FX3U_OFFSET }
 
 const REGISTER_COUNT := 256
 const CLIENT_BIT_WINDOW := 64
@@ -26,6 +27,14 @@ const CLIENT_BIT_WINDOW := 64
 @export var remote_port: int = 502
 @export var poll_interval: float = 0.015
 @export var auto_start: bool = true
+@export var address_profile: AddressProfile = AddressProfile.STANDARD_OPENPLC
+@export var fx_coil_offset: int = 0
+@export var fx_di_offset: int = 0
+@export var fx_hr_offset: int = 0
+@export var fx_ir_offset: int = 0
+@export var unit_id_filter: int = 0
+@export var client_unit_id: int = 1
+@export var client_packed_di: bool = true
 
 var _server := TCPServer.new()
 var _clients: Array[StreamPeerTCP] = []
@@ -72,6 +81,8 @@ func stop_service() -> void:
 	_disconnect_client()
 
 func start_server() -> Error:
+	if OS.has_feature("web"):
+		return ERR_UNAVAILABLE
 	if _listening:
 		return OK
 	var err := _server.listen(port, bind_address)
@@ -90,6 +101,8 @@ func stop_server() -> void:
 	_listening = false
 
 func _connect_client() -> Error:
+	if OS.has_feature("web"):
+		return ERR_UNAVAILABLE
 	_peer_rx.clear()
 	_waiting_reply = false
 	_poll_timer = 0.0
@@ -212,19 +225,30 @@ func _process_client(delta: float) -> void:
 		_send_client_poll()
 
 func _send_client_poll() -> void:
-	# 1) Read Coils 0..63 (FC01)
-	_send_client_pdu(PackedByteArray([0x01, 0x00, 0x00, 0x00, CLIENT_BIT_WINDOW]))
-	# 2) Write packed Discrete Inputs (bits 0..63) to Holding Registers 0..3 (FC16)
-	var reg_count := CLIENT_BIT_WINDOW / 16
-	var pdu := PackedByteArray([0x10, 0x00, 0x00, 0x00, reg_count, reg_count * 2])
-	for r in reg_count:
-		var word := 0
-		for b in 16:
-			if discrete_inputs[r * 16 + b]:
-				word |= (1 << b)
-		pdu.append((word >> 8) & 0xFF)
-		pdu.append(word & 0xFF)
-	_send_client_pdu(pdu)
+	var c_off := fx_coil_offset if address_profile == AddressProfile.FX3U_OFFSET else 0
+	# 1) Read Coils (FC01)
+	_send_client_pdu(PackedByteArray([
+		0x01,
+		(c_off >> 8) & 0xFF, c_off & 0xFF,
+		0x00, CLIENT_BIT_WINDOW,
+	]))
+	if client_packed_di:
+		# 2) Write packed Discrete Inputs (bits 0..63) to Holding Registers 0..3 (FC16)
+		var h_off := fx_hr_offset if address_profile == AddressProfile.FX3U_OFFSET else 0
+		var reg_count := CLIENT_BIT_WINDOW / 16
+		var pdu := PackedByteArray([
+			0x10,
+			(h_off >> 8) & 0xFF, h_off & 0xFF,
+			0x00, reg_count, reg_count * 2,
+		])
+		for r in reg_count:
+			var word := 0
+			for b in 16:
+				if discrete_inputs[r * 16 + b]:
+					word |= (1 << b)
+			pdu.append((word >> 8) & 0xFF)
+			pdu.append(word & 0xFF)
+		_send_client_pdu(pdu)
 	_waiting_reply = true
 
 func _send_client_pdu(pdu: PackedByteArray) -> void:
@@ -234,7 +258,7 @@ func _send_client_pdu(pdu: PackedByteArray) -> void:
 		(_tx_id >> 8) & 0xFF, _tx_id & 0xFF,
 		0x00, 0x00,
 		(mbap_len >> 8) & 0xFF, mbap_len & 0xFF,
-		0x01
+		client_unit_id & 0xFF
 	])
 	frame.append_array(pdu)
 	_peer.put_data(frame)
@@ -283,6 +307,8 @@ func _handle_mbap_frame(frame: PackedByteArray) -> PackedByteArray:
 	if proto != 0:
 		return PackedByteArray()
 	var unit_id := frame[6]
+	if unit_id_filter > 0 and unit_id != unit_id_filter:
+		return PackedByteArray()
 	var pdu := frame.slice(7)
 	var resp_pdu := _handle_pdu(pdu)
 	if resp_pdu.is_empty():
@@ -296,30 +322,39 @@ func _handle_pdu(pdu: PackedByteArray) -> PackedByteArray:
 	if pdu.is_empty():
 		return PackedByteArray()
 	var fc := pdu[0]
+	var use_fx := address_profile == AddressProfile.FX3U_OFFSET
+	var c_off := fx_coil_offset if use_fx else 0
+	var d_off := fx_di_offset if use_fx else 0
+	var h_off := fx_hr_offset if use_fx else 0
+	var i_off := fx_ir_offset if use_fx else 0
 	match fc:
 		0x01:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			return _read_bits(fc, coils, (pdu[1] << 8) | pdu[2], (pdu[3] << 8) | pdu[4])
+			var start := ((pdu[1] << 8) | pdu[2]) - c_off
+			return _read_bits(fc, coils, start, (pdu[3] << 8) | pdu[4])
 		0x02:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			return _read_bits(fc, discrete_inputs, (pdu[1] << 8) | pdu[2], (pdu[3] << 8) | pdu[4])
+			var start := ((pdu[1] << 8) | pdu[2]) - d_off
+			return _read_bits(fc, discrete_inputs, start, (pdu[3] << 8) | pdu[4])
 		0x03:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			return _read_registers(fc, holding_registers, (pdu[1] << 8) | pdu[2], (pdu[3] << 8) | pdu[4])
+			var start := ((pdu[1] << 8) | pdu[2]) - h_off
+			return _read_registers(fc, holding_registers, start, (pdu[3] << 8) | pdu[4])
 		0x04:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			return _read_registers(fc, input_registers, (pdu[1] << 8) | pdu[2], (pdu[3] << 8) | pdu[4])
+			var start := ((pdu[1] << 8) | pdu[2]) - i_off
+			return _read_registers(fc, input_registers, start, (pdu[3] << 8) | pdu[4])
 		0x05:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			var addr := (pdu[1] << 8) | pdu[2]
+			var addr := ((pdu[1] << 8) | pdu[2]) - c_off
 			var val_word := (pdu[3] << 8) | pdu[4]
-			if addr >= REGISTER_COUNT or (val_word != 0x0000 and val_word != 0xFF00):
-				return _exception(fc, 0x02 if addr >= REGISTER_COUNT else 0x03)
+			if addr < 0 or addr >= REGISTER_COUNT or (val_word != 0x0000 and val_word != 0xFF00):
+				return _exception(fc, 0x02 if (addr < 0 or addr >= REGISTER_COUNT) else 0x03)
 			var state := val_word == 0xFF00
 			coils[addr] = state
 			coil_written.emit(addr, state)
@@ -327,9 +362,9 @@ func _handle_pdu(pdu: PackedByteArray) -> PackedByteArray:
 		0x06:
 			if pdu.size() < 5:
 				return _exception(fc, 0x03)
-			var addr := (pdu[1] << 8) | pdu[2]
+			var addr := ((pdu[1] << 8) | pdu[2]) - h_off
 			var val := (pdu[3] << 8) | pdu[4]
-			if addr >= REGISTER_COUNT:
+			if addr < 0 or addr >= REGISTER_COUNT:
 				return _exception(fc, 0x02)
 			holding_registers[addr] = val
 			holding_register_written.emit(addr, val)
@@ -337,10 +372,10 @@ func _handle_pdu(pdu: PackedByteArray) -> PackedByteArray:
 		0x0F:
 			if pdu.size() < 6:
 				return _exception(fc, 0x03)
-			var start := (pdu[1] << 8) | pdu[2]
+			var start := ((pdu[1] << 8) | pdu[2]) - c_off
 			var count := (pdu[3] << 8) | pdu[4]
 			var byte_count := pdu[5]
-			if count < 1 or start + count > REGISTER_COUNT or pdu.size() < 6 + byte_count:
+			if start < 0 or count < 1 or start + count > REGISTER_COUNT or pdu.size() < 6 + byte_count:
 				return _exception(fc, 0x02)
 			for i in count:
 				var state := ((pdu[6 + (i >> 3)] >> (i & 7)) & 1) == 1
@@ -350,10 +385,10 @@ func _handle_pdu(pdu: PackedByteArray) -> PackedByteArray:
 		0x10:
 			if pdu.size() < 6:
 				return _exception(fc, 0x03)
-			var start := (pdu[1] << 8) | pdu[2]
+			var start := ((pdu[1] << 8) | pdu[2]) - h_off
 			var count := (pdu[3] << 8) | pdu[4]
 			var byte_count := pdu[5]
-			if count < 1 or start + count > REGISTER_COUNT or byte_count != count * 2 or pdu.size() < 6 + byte_count:
+			if start < 0 or count < 1 or start + count > REGISTER_COUNT or byte_count != count * 2 or pdu.size() < 6 + byte_count:
 				return _exception(fc, 0x02)
 			for i in count:
 				var val := (pdu[6 + i * 2] << 8) | pdu[7 + i * 2]
@@ -364,7 +399,7 @@ func _handle_pdu(pdu: PackedByteArray) -> PackedByteArray:
 			return _exception(fc, 0x01)
 
 func _read_bits(fc: int, table: Array[bool], start: int, count: int) -> PackedByteArray:
-	if count < 1 or count > 2000 or start + count > REGISTER_COUNT:
+	if start < 0 or count < 1 or count > 2000 or start + count > REGISTER_COUNT:
 		return _exception(fc, 0x02)
 	var byte_count := (count + 7) >> 3
 	var out := PackedByteArray([fc, byte_count])
@@ -378,7 +413,7 @@ func _read_bits(fc: int, table: Array[bool], start: int, count: int) -> PackedBy
 	return out
 
 func _read_registers(fc: int, table: Array[int], start: int, count: int) -> PackedByteArray:
-	if count < 1 or count > 125 or start + count > REGISTER_COUNT:
+	if start < 0 or count < 1 or count > 125 or start + count > REGISTER_COUNT:
 		return _exception(fc, 0x02)
 	var out := PackedByteArray([fc, count * 2])
 	for i in count:

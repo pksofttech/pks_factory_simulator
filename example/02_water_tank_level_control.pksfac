@@ -1,0 +1,146 @@
+{
+  "format": "pks_factory_project",
+  "ladder": {
+    "code": "// Example 2: Water Tank Level & Cooling Control\n// X2=TankHighSensor\n// Y0=TankPump, Y1=FeedPump, Y2=SolenoidValve, Y3=CoolingFan\nLDN X2\nOUT Y0\nOUT Y1\nLD X2\nOUT Y2\nLD X0\nORN X0\nOUT Y3\nEND\n",
+    "enabled": true
+  },
+  "objects": [
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "water_tank",
+      "modbus_coil": 0,
+      "modbus_input": 0,
+      "modbus_input_reg": 0,
+      "name": "WaterTank",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "pump",
+      "modbus_coil": 1,
+      "modbus_input": -1,
+      "name": "FeedPump",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -2.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "solenoid_valve",
+      "modbus_coil": 2,
+      "modbus_input": -1,
+      "name": "OutletValve",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 2.5,
+      "z": 0.0
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "motor_fan",
+      "modbus_coil": 3,
+      "modbus_input": -1,
+      "name": "CoolingFan",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.0,
+      "z": -2.4
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "stack_light",
+      "modbus_coil": 4,
+      "modbus_input": -1,
+      "name": "StatusTower",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -2.5,
+      "z": -2.2
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_barrel",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "ChemicalDrum1",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -4.2,
+      "z": 1.5
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_barrel",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "ChemicalDrum2",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": -4.2,
+      "z": 2.5
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_workbench",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "MaintWorkbench",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 3.5,
+      "z": -2.8
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_production_board",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "KPIBoard",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 0.0,
+      "z": 3.6
+    },
+    {
+      "base_id": "",
+      "height_offset": 0.0,
+      "kind": "prop_safety_sign",
+      "modbus_coil": -1,
+      "modbus_input": -1,
+      "name": "SafetySign",
+      "reversed": false,
+      "rotation": 0.0,
+      "x": 2.5,
+      "z": 2.0
+    }
+  ],
+  "plc": {
+    "modbus_enabled": false,
+    "plc_mode": true,
+    "plc_notation": "mitsubishi"
+  },
+  "project_version": 1,
+  "ui": {
+    "decor_style": "factory",
+    "grid_step": 0.5,
+    "show_edit_grid": false
+  },
+  "version": 1,
+  "workspace": {
+    "depth": 40,
+    "width": 40
+  }
+}

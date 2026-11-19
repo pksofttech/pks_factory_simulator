@@ -17,12 +17,13 @@ const ESTOP_Z_RELEASED := 0.288
 const ESTOP_Z_ACTIVE := 0.276
 const BTN_TRAVEL_SPEED := 0.14
 const SLOT_COL_X := [-0.13, 0.0, 0.13]
-const SLOT_ROW_Y := [1.60, 1.42, 1.18, 1.01]
+const SLOT_ROW_Y := [1.63, 1.48, 1.33, 1.18, 1.03]
 const SLOT_Z := 0.276
 const CABINET_LAMP_SCENE := preload("res://objects/cabinet_modules/cabinet_lamp.tscn")
 const CABINET_BTN_SCENE := preload("res://objects/cabinet_modules/cabinet_button.tscn")
 const CABINET_SWITCH_SCENE := preload("res://objects/cabinet_modules/cabinet_switch.tscn")
 const CABINET_POT_SCENE := preload("res://objects/cabinet_modules/cabinet_pot.tscn")
+const CABINET_DPM_SCENE := preload("res://objects/cabinet_modules/cabinet_dpm.tscn")
 
 var dynamic_slots: Array[Dictionary] = []
 var dynamic_button_states: Dictionary = {}
@@ -490,6 +491,9 @@ func set_slot_module(col: int, row: int, kind: String, label: String, color: Col
 		"label": label,
 		"color": color,
 		"io_id": resolved_io,
+		"modbus_coil": -1,
+		"modbus_input": -1,
+		"modbus_input_reg": -1,
 	}
 	dynamic_slots.append(entry)
 	return _spawn_slot_node(entry)
@@ -575,6 +579,17 @@ func set_dynamic_pot(io_id: String, val: float) -> void:
 		if str(child.get("io_id")) == io_id and "value" in child:
 			child.set("value", clamped)
 
+func set_dynamic_dpm(io_id: String, raw_val: int) -> void:
+	var clamped := clampi(raw_val, -32768, 65535)
+	for item in dynamic_slots:
+		if item is Dictionary and str(item.get("io_id", "")) == io_id:
+			item["raw_value"] = clamped
+	var container := _ensure_dynamic_container()
+	for child in container.get_children():
+		if str(child.get("io_id")) == io_id and "raw_value" in child:
+			if int(child.get("raw_value")) != clamped:
+				child.set("raw_value", clamped)
+
 func update_slot_module(col: int, row: int, props: Dictionary) -> bool:
 	for i in range(dynamic_slots.size()):
 		var item := dynamic_slots[i]
@@ -603,6 +618,15 @@ func update_slot_module(col: int, row: int, props: Dictionary) -> bool:
 						node.set("switch_color", c)
 					elif new_kind == "potentiometer":
 						node.set("knob_color", c)
+					elif new_kind == "dpm":
+						node.set("led_color", c)
+				if new_kind == "dpm":
+					if props.has("unit"):
+						node.set("unit_text", str(props["unit"]))
+					if props.has("decimals"):
+						node.set("decimals", int(props["decimals"]))
+					if props.has("signed"):
+						node.set("signed_mode", bool(props["signed"]))
 				if props.has("io_id"):
 					node.set("io_id", str(props["io_id"]))
 			return true
@@ -678,6 +702,15 @@ func _spawn_slot_node(entry: Dictionary) -> Node3D:
 			entry["value"] = v
 			dynamic_pot_changed.emit(v, id)
 		)
+	elif kind == "dpm":
+		node = CABINET_DPM_SCENE.instantiate() as Node3D
+		node.set("label_text", label)
+		node.set("led_color", color)
+		node.set("unit_text", str(entry.get("unit", "")))
+		node.set("decimals", int(entry.get("decimals", 0)))
+		node.set("signed_mode", bool(entry.get("signed", true)))
+		node.set("raw_value", int(entry.get("raw_value", 0)))
+		node.set("io_id", io_id)
 	else:
 		node = CABINET_LAMP_SCENE.instantiate() as Node3D
 		node.set("label_text", label)
