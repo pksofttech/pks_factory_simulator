@@ -42,10 +42,12 @@ jobs:
           mv /tmp/godot/tpl/templates/* "${TEMPLATE_DIR}/"
           rm -rf /tmp/godot
 
-      - name: Export Web build
+      - name: Build Landing Page & Export Web app
         run: |
-          mkdir -p build/web
-          godot --headless --export-release "Web" build/web/index.html
+          mkdir -p build/web/play build/web/assets/branding
+          cp -r site/* build/web/
+          cp assets/branding/app_logo.svg build/web/assets/branding/
+          godot --headless --export-release "Web" build/web/play/index.html
           touch build/web/.nojekyll
 
       - name: Upload Pages artifact

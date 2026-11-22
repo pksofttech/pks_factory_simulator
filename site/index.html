@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PKS Factory Simulator — 3D Industrial Automation &amp; PLC Sandbox</title>
+  <meta
+    name="description"
+    content="3D industrial automation & PLC sandbox simulator built with Godot 4.7.2. Design conveyor lines, program Internal Ladder PLC or Modbus TCP, and test factory cells on Web & PC."
+  />
+  <meta property="og:title" content="PKS Factory Simulator — 3D Industrial Automation & PLC Sandbox" />
+  <meta
+    property="og:description"
+    content="Design 3D conveyor lines, wire smart sensors & actuators, program Ladder PLC or Modbus TCP, and run directly on WebGL or Desktop PC."
+  />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="assets/branding/app_logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar" id="top">
+    <div class="container nav-inner">
+      <a class="brand" href="#hero" aria-label="PKS Factory Simulator Home">
+        <img src="assets/branding/app_logo.svg" alt="PKS Factory Simulator Logo" width="34" height="34" />
+        <span class="brand-text">PKS Factory Simulator</span>
+      </a>
+
+      <nav class="nav-links" id="navMenu" aria-label="Primary Navigation">
+        <a href="#features" data-i18n="nav.features">ฟีเจอร์</a>
+        <a href="#web-demo" data-i18n="nav.web">เล่นบนเว็บ</a>
+        <a href="#examples" data-i18n="nav.examples">โปรเจกต์ตัวอย่าง</a>
+        <a href="#controls" data-i18n="nav.controls">การควบคุม</a>
+        <a href="#download" data-i18n="nav.download">ดาวน์โหลด</a>
+        <a class="btn btn-primary btn-sm nav-mobile-cta" href="./play/" data-i18n="nav.playCta">เล่นบนเว็บ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button
+          id="langToggle"
+          class="btn btn-ghost btn-sm"
+          type="button"
+          aria-label="Switch Language"
+        >EN</button>
+        <a class="btn btn-primary btn-sm nav-desktop-cta" href="./play/" data-i18n="nav.playCta">เล่นบนเว็บ</a>
+        <button
+          id="menuToggle"
+          class="menu-toggle"
+          type="button"
+          aria-label="Toggle navigation menu"
+          aria-expanded="false"
+          aria-controls="navMenu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="badge-row">
+            <span class="pill">Godot 4.7.2</span>
+            <span class="pill">3D WebGL</span>
+            <span class="pill">Ladder &amp; Modbus TCP</span>
+            <span class="pill pill-green">Mobile Touch Ready</span>
+          </div>
+
+          <h1 data-i18n="hero.title">
+            จำลองสายพานโรงงาน 3 มิติ และระบบอัตโนมัติ PLC แบบครบวงจร
+          </h1>
+          <p class="hero-subtitle" data-i18n="hero.subtitle">
+            ออกแบบสายการผลิต 3 มิติ เชื่อมต่อเซนเซอร์และแอคชูเอเตอร์ เขียนโปรแกรม Internal Ladder PLC หรือเชื่อมต่อ Modbus TCP ภายนอก พร้อม NPC อัตโนมัติ เล่นได้ทันทีทั้งบนเว็บเบราว์เซอร์และ PC
+          </p>
+
+          <div class="hero-cta">
+            <a class="btn btn-primary btn-lg" href="#web-demo" data-i18n="hero.ctaWeb">
+              ทดลองเล่นบนเว็บทันที
+            </a>
+            <a class="btn btn-outline btn-lg" href="#download" data-i18n="hero.ctaDownload">
+              ดาวน์โหลด PC (Windows / Linux)
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-card scada-panel" aria-label="SCADA Live Status Preview">
+          <div class="scada-header">
+            <div class="scada-title-group">
+              <img src="assets/branding/app_logo.svg" alt="" width="38" height="38" />
+              <div>
+                <div class="scada-kicker">SCADA TELEMETRY</div>
+                <div class="scada-name">CELL-01 // SORTING LINE</div>
+              </div>
+            </div>
+            <span class="status-badge status-run">
+              <span class="pulse-dot"></span>
+              PLC: RUN
+            </span>
+          </div>
+
+          <div class="scada-conveyor-track" aria-hidden="true">
+            <div class="track-rail"></div>
+            <div class="track-box box-ok">OK</div>
+            <div class="track-box box-ng">NG</div>
+            <div class="track-sensor">VISION</div>
+          </div>
+
+          <div class="scada-metrics">
+            <div class="metric-item">
+              <span class="metric-label">PLC ENGINE</span>
+              <span class="metric-val accent-green">PLC: RUN</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">INSPECTION</span>
+              <span class="metric-val accent-warn">VisionSensor: NG/OK</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">DESKTOP LINK</span>
+              <span class="metric-val accent-cyan">Modbus TCP :1502</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">FLOOR CREW</span>
+              <span class="metric-val">5 Autonomous NPCs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Web Simulator Runner -->
+    <section class="section" id="web-demo">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="web.eyebrow">LIVE WEBGL SANDBOX</span>
+          <h2 data-i18n="web.title">ทดลองใช้งาน Simulator บนเว็บเบราว์เซอร์</h2>
+          <p data-i18n="web.desc">
+            คลิกเปิดใช้งานเพื่อโหลดตัวจำลอง 3 มิติ (WebAssembly) เฉพาะเมื่อคุณต้องการ เพื่อความรวดเร็วในการเปิดหน้าเว็บ
+          </p>
+        </div>
+
+        <div class="player-frame scada-panel" id="webPlayerFrame">
+          <div class="player-toolbar">
+            <div class="player-status">
+              <span class="status-dot" id="webStatusDot"></span>
+              <span class="player-status-text" id="webStatusText">WebGL Sandbox — ./play/</span>
+            </div>
+            <div class="player-controls">
+              <button class="btn btn-primary btn-sm" id="launchWebBtn" type="button" data-i18n="web.btnLaunch">
+                เปิด Simulator
+              </button>
+              <button class="btn btn-danger btn-sm hidden" id="stopWebBtn" type="button" data-i18n="web.btnStop">
+                หยุดการทำงาน
+              </button>
+              <button class="btn btn-ghost btn-sm" id="fullscreenWebBtn" type="button" data-i18n="web.btnFullscreen">
+                เต็มหน้าจอ
+              </button>
+              <a class="btn btn-outline btn-sm" href="./play/" target="_blank" rel="noopener" data-i18n="web.btnNewTab">
+                เปิดแท็บใหม่
+              </a>
+            </div>
+          </div>
+
+          <div class="player-stage" id="webStage">
+            <div class="player-placeholder" id="webPlaceholder">
+              <img src="assets/branding/app_logo.svg" alt="PKS Factory Simulator" width="72" height="72" />
+              <h3 data-i18n="web.placeholderTitle">พร้อมจำลองสายพาน 3D บนเบราว์เซอร์</h3>
+              <p data-i18n="web.placeholderDesc">
+                รองรับทั้งเมาส์คีย์บอร์ดบนคอมพิวเตอร์ และระบบสัมผัส (Touch) บนมือถือ/แท็บเล็ต
+              </p>
+              <button class="btn btn-primary btn-lg" id="launchWebHeroBtn" type="button" data-i18n="web.btnLaunchBig">
+                Launch Web Simulator
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p class="web-note" data-i18n="web.note">
+          หมายเหตุ: เวอร์ชันเว็บทำงานในโหมด Internal Ladder PLC และ Manual บนเบราว์เซอร์ Desktop &amp; Mobile สำหรับการเชื่อมต่อ Modbus TCP Server/Client กรุณาดาวน์โหลดเวอร์ชัน PC (Windows / Linux) ด้านล่าง
+        </p>
+      </div>
+    </section>
+
+    <!-- Key Features Grid -->
+    <section class="section section-alt" id="features">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="features.eyebrow">CAPABILITIES</span>
+          <h2 data-i18n="features.title">ความสามารถหลักของระบบ</h2>
+          <p data-i18n="features.subtitle">
+            เครื่องมือครบชุดสำหรับการเรียนรู้ ออกแบบ ทดสอบตรรกะ PLC และจำลองกระบวนการผลิตจริง
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <article class="card feature-card">
+            <div class="feature-icon">01</div>
+            <h3 data-i18n="features.f1.title">อุปกรณ์อุตสาหกรรม 3 มิติ</h3>
+            <p data-i18n="features.f1.desc">
+              สายพาน 9m/3m, โต๊ะหมุน 90°, ตัวปล่อยกล่อง (Emitter), ตัวเก็บกล่อง (Remover), ถังคัดแยก (Reject Bin), แขนดัน (Pusher), ตัวกั้น (Stopper), ปั๊มน้ำ, ถังน้ำ และโซลินอยด์วาล์ว
+            </p>
+          </article>
+
+          <article class="card feature-card">
+            <div class="feature-icon">02</div>
+            <h3 data-i18n="features.f2.title">เซนเซอร์อัจฉริยะและ Vision NG</h3>
+            <p data-i18n="features.f2.desc">
+              VisionSensor ตรวจสอบชิ้นงานดี/เสีย (OK/NG), RGB Sensor แยกสี, Photo Sensor ตรวจจับตำแหน่ง และม่านแสงนิรภัย Light Curtain
+            </p>
+          </article>
+
+          <article class="card feature-card">
+            <div class="feature-icon">03</div>
+            <h3 data-i18n="features.f3.title">ระบบ PLC คู่ (Ladder &amp; Modbus)</h3>
+            <p data-i18n="features.f3.desc">
+              รองรับ Internal Ladder PLC ในตัว (รูปแบบ IEC และ Mitsubishi FX3U) รวมถึง Modbus TCP Server/Client สำหรับเวอร์ชัน Desktop PC
+            </p>
+          </article>
+
+          <article class="card feature-card">
+            <div class="feature-icon">04</div>
+            <h3 data-i18n="features.f4.title">ตู้ควบคุม 3D/2D และไฟสัญญาณ</h3>
+            <p data-i18n="features.f4.desc">
+              ตู้คอนโทรลพร้อมปุ่มกด สวิตช์เลือกโหมด ปุ่มฉุกเฉิน E-STOP ตัวปรับค่า Potentiometer มิเตอร์วัดค่า DPM และไฟ Stack Light 3 สี
+            </p>
+          </article>
+
+          <article class="card feature-card">
+            <div class="feature-icon">05</div>
+            <h3 data-i18n="features.f5.title">NPC โรงงานเดินตรวจอัตโนมัติ</h3>
+            <p data-i18n="features.f5.desc">
+              ทีม NPC 5 บทบาท: Operator, Supervisor, Safety, Maintenance และ QC Inspector เดินหลบสิ่งกีดขวาง ตรวจสอบเครื่องจักร และตอบสนองต่อแจ้งเตือน
+            </p>
+          </article>
+
+          <article class="card feature-card">
+            <div class="feature-icon">06</div>
+            <h3 data-i18n="features.f6.title">รองรับทั้ง PC และ Mobile Touch</h3>
+            <p data-i18n="features.f6.desc">
+              ควบคุมกล้องด้วยการสัมผัส 1 นิ้วหมุน/ลาก, 2 นิ้วถ่างซูมและเลื่อนฉาก พร้อมปุ่มกล้องลัดบนหน้าจอและ UI ที่ปรับขนาดอัตโนมัติ
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Web vs Desktop Comparison -->
+    <section class="section" id="compare">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="compare.eyebrow">PLATFORM MATRIX</span>
+          <h2 data-i18n="compare.title">เปรียบเทียบเวอร์ชัน Web กับ Desktop PC</h2>
+        </div>
+
+        <div class="table-wrap scada-panel">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th data-i18n="compare.colFeature">ความสามารถ</th>
+                <th data-i18n="compare.colWeb">Web Version (Browser)</th>
+                <th data-i18n="compare.colDesktop">Desktop PC (Windows / Linux)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="compare.r1">เล่นได้ทันทีไม่ต้องติดตั้ง (Instant Play)</td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+                <td><span class="badge-muted" data-i18n="compare.portable">ดาวน์โหลดไฟล์พกพา</span></td>
+              </tr>
+              <tr>
+                <td data-i18n="compare.r2">Internal Ladder PLC (IEC / FX3U)</td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+              </tr>
+              <tr>
+                <td data-i18n="compare.r3">Modbus TCP Server/Client (External PLC / OpenPLC / FX3U)</td>
+                <td><span class="badge-no" data-i18n="compare.browserLimit">ข้อจำกัดเบราว์เซอร์</span></td>
+                <td><span class="badge-yes" data-i18n="compare.fullSupport">รองรับเต็มรูปแบบ</span></td>
+              </tr>
+              <tr>
+                <td data-i18n="compare.r4">บันทึกและโหลดโปรเจกต์ (.pksfac)</td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+              </tr>
+              <tr>
+                <td data-i18n="compare.r5">ระบบสัมผัสหน้าจอมือถือ (Mobile Touch Controls)</td>
+                <td><span class="badge-yes" data-i18n="compare.yes">รองรับ</span></td>
+                <td><span class="badge-muted" data-i18n="compare.desktopInput">เมาส์ &amp; คีย์บอร์ด</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Example Projects -->
+    <section class="section section-alt" id="examples">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="examples.eyebrow">READY-TO-RUN SCENES</span>
+          <h2 data-i18n="examples.title">โปรเจกต์ตัวอย่าง (.pksfac)</h2>
+          <p data-i18n="examples.subtitle">
+            เปิดทดลองซีนตัวอย่างได้ในตัวจำลอง หรือดาวน์โหลดไฟล์ต้นฉบับจาก GitHub ไปศึกษาต่อ
+          </p>
+        </div>
+
+        <div class="examples-grid">
+          <article class="card example-card">
+            <div class="example-tag">01_conveyor_sorting_line.pksfac</div>
+            <h3 data-i18n="examples.e1.title">สายพานคัดแยกชิ้นงาน Vision NG</h3>
+            <p data-i18n="examples.e1.desc">
+              ใช้ VisionSensor ตรวจจับชิ้นงานเสีย ร่วมกับ DivertPusher เพื่อผลักชิ้นงานลง RejectBin โดยอัตโนมัติ
+            </p>
+            <div class="example-actions">
+              <a class="btn btn-primary btn-sm" href="./play/" data-i18n="examples.openWeb">เปิดใน Web Simulator</a>
+              <a
+                class="btn btn-ghost btn-sm"
+                href="https://github.com/pksofttech/pks_factory_simulator/blob/main/example/01_conveyor_sorting_line.pksfac"
+                target="_blank"
+                rel="noopener"
+                data-i18n="examples.viewFile"
+              >ดูไฟล์บน GitHub</a>
+            </div>
+          </article>
+
+          <article class="card example-card">
+            <div class="example-tag">02_water_tank_level_control.pksfac</div>
+            <h3 data-i18n="examples.e2.title">ระบบควบคุมระดับน้ำอัตโนมัติ</h3>
+            <p data-i18n="examples.e2.desc">
+              จำลอง WaterTank พร้อมเซนเซอร์ระดับ L/M/H เชื่อมต่อ FeedPump, OutletValve และ CoolingFan ด้วยอินเตอร์ล็อก
+            </p>
+            <div class="example-actions">
+              <a class="btn btn-primary btn-sm" href="./play/" data-i18n="examples.openWeb">เปิดใน Web Simulator</a>
+              <a
+                class="btn btn-ghost btn-sm"
+                href="https://github.com/pksofttech/pks_factory_simulator/blob/main/example/02_water_tank_level_control.pksfac"
+                target="_blank"
+                rel="noopener"
+                data-i18n="examples.viewFile"
+              >ดูไฟล์บน GitHub</a>
+            </div>
+          </article>
+
+          <article class="card example-card">
+            <div class="example-tag">03_l_turn_warehouse_line.pksfac</div>
+            <h3 data-i18n="examples.e3.title">สายพานคลังสินค้าเลี้ยว 90° และนิรภัย</h3>
+            <p data-i18n="examples.e3.desc">
+              ไลน์ลำเลียง L-Turn 90 องศา พร้อมม่านแสงนิรภัย SafetyCurtain ตัดการทำงานฉุกเฉินเมื่อมีผู้ผ่านเข้าพื้นที่
+            </p>
+            <div class="example-actions">
+              <a class="btn btn-primary btn-sm" href="./play/" data-i18n="examples.openWeb">เปิดใน Web Simulator</a>
+              <a
+                class="btn btn-ghost btn-sm"
+                href="https://github.com/pksofttech/pks_factory_simulator/blob/main/example/03_l_turn_warehouse_line.pksfac"
+                target="_blank"
+                rel="noopener"
+                data-i18n="examples.viewFile"
+              >ดูไฟล์บน GitHub</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls Guide -->
+    <section class="section" id="controls">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="controls.eyebrow">INPUT &amp; NAVIGATION</span>
+          <h2 data-i18n="controls.title">คู่มือการควบคุม</h2>
+        </div>
+
+        <div class="tab-bar" role="tablist" aria-label="Control Modes">
+          <button
+            class="tab-btn active"
+            id="tabDesktop"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panelDesktop"
+            data-tab="desktop"
+            data-i18n="controls.tabDesktop"
+          >Desktop (Mouse &amp; Keyboard)</button>
+          <button
+            class="tab-btn"
+            id="tabMobile"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panelMobile"
+            data-tab="mobile"
+            data-i18n="controls.tabMobile"
+          >Mobile Touch</button>
+        </div>
+
+        <div class="table-wrap scada-panel tab-panel active" id="panelDesktop" role="tabpanel" aria-labelledby="tabDesktop">
+          <table class="controls-table">
+            <thead>
+              <tr>
+                <th data-i18n="controls.colAction">คำสั่ง / การกระทำ</th>
+                <th data-i18n="controls.colInput">ปุ่ม / การควบคุม</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="controls.d1">หมุนมุมกล้องรอบฉาก (Orbit)</td>
+                <td><kbd>Right-Click</kbd> + <kbd>Drag</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d2">เลื่อนมุมกล้อง (Pan)</td>
+                <td><kbd>Middle-Click</kbd> + <kbd>Drag</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d3">ซูมเข้า / ออก (Zoom)</td>
+                <td><kbd>Mouse Wheel</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d4">รีเซ็ตมุมกล้อง (Reset Camera)</td>
+                <td><kbd>R</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d5">เปิด / ปิดเต็มหน้าจอ (Fullscreen)</td>
+                <td><kbd>F11</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d6">หมุนวัตถุ 90° (ในโหมด Edit)</td>
+                <td><kbd>Q</kbd> / <kbd>E</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d7">ลบวัตถุที่เลือก (ในโหมด Edit)</td>
+                <td><kbd>Delete</kbd></td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.d8">ย้อนกลับ / ทำซ้ำ (Undo / Redo)</td>
+                <td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap scada-panel tab-panel" id="panelMobile" role="tabpanel" aria-labelledby="tabMobile" hidden>
+          <table class="controls-table">
+            <thead>
+              <tr>
+                <th data-i18n="controls.colAction">คำสั่ง / การกระทำ</th>
+                <th data-i18n="controls.colInput">ท่าทางการสัมผัส</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="controls.m1">เลือกอุปกรณ์ หรือวางชิ้นส่วน</td>
+                <td data-i18n="controls.m1Input">แตะ 1 ครั้ง (Tap)</td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.m2">หมุนมุมกล้อง / ลากย้ายวัตถุที่เลือกในโหมด Edit</td>
+                <td data-i18n="controls.m2Input">ลาก 1 นิ้ว (1-finger Drag)</td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.m3">ซูมเข้า / ออก</td>
+                <td data-i18n="controls.m3Input">จีบ / ถ่าง 2 นิ้ว (Pinch Zoom)</td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.m4">เลื่อนตำแหน่งกล้อง (Pan)</td>
+                <td data-i18n="controls.m4Input">ลากพร้อมกัน 2 นิ้ว (2-finger Drag Pan)</td>
+              </tr>
+              <tr>
+                <td data-i18n="controls.m5">แถบควบคุมกล้องด่วนบนหน้าจอ</td>
+                <td><kbd>-</kbd> <kbd>+</kbd> <kbd>Top</kbd> <kbd>R</kbd></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="section section-alt" id="download">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-eyebrow" data-i18n="download.eyebrow">GET PKS FACTORY SIMULATOR</span>
+          <h2 data-i18n="download.title">เล่นออนไลน์หรือดาวน์โหลดลงเครื่อง PC</h2>
+          <p data-i18n="download.subtitle">
+            เลือกใช้งานบนเว็บได้ทันที หรือดาวน์โหลดเวอร์ชัน Desktop เพื่อเชื่อมต่อ Modbus TCP เต็มรูปแบบ
+          </p>
+        </div>
+
+        <div class="download-grid">
+          <article class="card download-card download-featured">
+            <div class="platform-badge">BROWSER</div>
+            <h3>Web Browser (Desktop &amp; Mobile)</h3>
+            <p data-i18n="download.webDesc">
+              เล่นผ่าน WebGL ได้ทันที ไม่ต้องติดตั้ง รองรับ Internal Ladder PLC และระบบสัมผัสบนมือถือ
+            </p>
+            <div class="download-meta" data-i18n="download.webMeta">WebAssembly • Instant Launch</div>
+            <a class="btn btn-primary" href="./play/" data-i18n="download.webCta">เล่นบนเว็บ</a>
+          </article>
+
+          <article class="card download-card">
+            <div class="platform-badge">WINDOWS</div>
+            <h3>Windows (64-bit PC)</h3>
+            <p data-i18n="download.winDesc">
+              ประสิทธิภาพสูงสุดบน Desktop พร้อม Modbus TCP Server/Client สำหรับเชื่อมต่อ PLC จริงหรือ OpenPLC
+            </p>
+            <div class="download-meta" id="dlWindowsMeta">GitHub Releases (.zip / .exe)</div>
+            <a
+              class="btn btn-outline"
+              id="dlWindowsBtn"
+              href="https://github.com/pksofttech/pks_factory_simulator/releases/latest"
+              target="_blank"
+              rel="noopener"
+              data-i18n="download.winCta"
+            >ดาวน์โหลด Windows</a>
+          </article>
+
+          <article class="card download-card">
+            <div class="platform-badge">LINUX</div>
+            <h3>Linux (64-bit PC)</h3>
+            <p data-i18n="download.linuxDesc">
+              รันบน Linux 64-bit พร้อมรองรับ Modbus TCP Server/Client และการจำลองโรงงานเต็มรูปแบบ
+            </p>
+            <div class="download-meta" id="dlLinuxMeta">GitHub Releases (.tar.gz / .x86_64)</div>
+            <a
+              class="btn btn-outline"
+              id="dlLinuxBtn"
+              href="https://github.com/pksofttech/pks_factory_simulator/releases/latest"
+              target="_blank"
+              rel="noopener"
+              data-i18n="download.linuxCta"
+            >ดาวน์โหลด Linux</a>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/branding/app_logo.svg" alt="" width="24" height="24" />
+        <span>&copy; PKS SoftTech &mdash; PKS Factory Simulator</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/pksofttech/pks_factory_simulator" target="_blank" rel="noopener">GitHub Repo</a>
+        <a href="https://github.com/pksofttech/pks_factory_simulator/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/pksofttech/pks_factory_simulator/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

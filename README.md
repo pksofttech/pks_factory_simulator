@@ -6,7 +6,8 @@
 
 A 3D industrial automation & PLC sandbox simulator built with **Godot Engine 4.7.2** (`gl_compatibility` renderer). Design conveyor lines, wire sensors and actuators, program logic using the built-in **Ladder PLC** or connect external controllers via **Modbus TCP**, and watch autonomous factory NPCs patrol the floor.
 
-**Live Web Demo:** https://pksofttech.github.io/pks_factory_simulator/
+- **Website & Downloads:** https://pksofttech.github.io/pks_factory_simulator/
+- **Direct Web Simulator:** https://pksofttech.github.io/pks_factory_simulator/play/
 
 > **Note on Web build:** Browsers do not support raw TCP sockets, so the Web version runs **Internal Ladder PLC** and **Manual** modes. Use a Desktop build (Windows / Linux / macOS) for **Modbus TCP** Server/Client communication.
 
@@ -65,9 +66,10 @@ Ready-to-run `.pksfac` simulations are included in [`example/`](example/):
 - **Entry Scene:** [`loading_screen.tscn`](loading_screen.tscn) → [`main.tscn`](main.tscn)
 - **Web Export & Auto-Deploy:** Configured via [`export_presets.cfg`](export_presets.cfg) and [`.github/workflows/pages.yml`](.github/workflows/pages.yml), which automatically builds and deploys to GitHub Pages on every push to `main`.
 
-To test the Web export locally:
+To test the Landing Page & Web export locally:
 
 ```bash
-godot --headless --export-release "Web" build/web/index.html
-python3 -m http.server 8080 -d build/web
+./tools/run_web.sh
+# Or preview only the landing page without running Godot Web export:
+./tools/run_web.sh --skip-export
 ```
