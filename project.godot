@@ -12,8 +12,8 @@ config_version=5
 
 config/name="Factory 3D Demo"
 run/main_scene="res://loading_screen.tscn"
-config/icon="res://assets/branding/app_logo.svg"
 config/features=PackedStringArray("4.7")
+config/icon="res://assets/branding/app_logo.svg"
 
 [autoload]
 

@@ -77,6 +77,19 @@ var preview_material: StandardMaterial3D
 var _right_click_tracking := false
 var _right_click_press_pos := Vector2.ZERO
 var _right_click_moved := false
+var _touch_points: Dictionary = {}
+var _touch_start_pos := Vector2.ZERO
+var _touch_moved := false
+var _touch_mode: String = "" # "", "orbit", "object_drag", "pinch_pan"
+var _touch_prev_pinch_dist := 0.0
+var _touch_prev_centroid := Vector2.ZERO
+var _is_touch_device := false
+var top_toolbar_panel: PanelContainer
+var desktop_info_pill: PanelContainer
+var io_status_scroll: ScrollContainer
+var mobile_cam_bar: PanelContainer
+var _mobile_cam_view_btn: Button
+var _cam_top_view := false
 var edit_grid: Node3D
 var floor_body: StaticBody3D
 var workspace_width := 40
@@ -176,6 +189,8 @@ var rgb_mode_row: HBoxContainer
 var rgb_mode_option: OptionButton
 var emitter_mode_row: HBoxContainer
 var emitter_mode_option: OptionButton
+var emitter_defect_row: HBoxContainer
+var emitter_defect_input: SpinBox
 var undo_button: Button
 var redo_button: Button
 const MAX_UNDO_STEPS := 30
@@ -369,6 +384,10 @@ func _ready() -> void:
 	_build_world()
 	_build_edit_grid()
 	_build_ui()
+	if get_viewport() != null:
+		get_viewport().size_changed.connect(_on_viewport_resized)
+	if is_instance_valid(top_toolbar_panel):
+		top_toolbar_panel.resized.connect(_on_viewport_resized)
 	ModbusTCP.coil_written.connect(_on_modbus_coil_written)
 	test_box = _spawn_box()
 	if test_mode:
@@ -381,7 +400,13 @@ func _ready() -> void:
 		_set_running(false)
 		sandbox_label.text = "Mode: STOP"
 		_load_settings()
+		if (
+			(_is_mobile_web() or _is_compact_viewport())
+			and is_instance_valid(io_status_panel) and io_status_panel.visible
+		):
+			_toggle_io_status_panel()
 		_is_loading_settings = false
+	_on_viewport_resized.call_deferred()
 
 
 func _notification(what: int) -> void:
@@ -409,6 +434,83 @@ func _unhandled_input(event: InputEvent) -> void:
 		DisplayServer.window_set_mode(
 			DisplayServer.WINDOW_MODE_WINDOWED if is_full else DisplayServer.WINDOW_MODE_FULLSCREEN
 		)
+		get_viewport().set_input_as_handled()
+		return
+	if (event is InputEventMouseButton or event is InputEventMouseMotion) and event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
+	if event is InputEventScreenTouch:
+		_is_touch_device = true
+		if event.pressed:
+			_touch_points[event.index] = event.position
+			if _touch_points.size() == 1:
+				_touch_start_pos = event.position
+				_touch_moved = false
+				_touch_mode = ""
+			elif _touch_points.size() == 2:
+				dragging_object = false
+				rotating_object = false
+				_drag_undo_snapshot = {}
+				_touch_mode = "pinch_pan"
+				_touch_moved = true
+				var pts := _touch_points.values()
+				var p0: Vector2 = pts[0]
+				var p1: Vector2 = pts[1]
+				_touch_prev_pinch_dist = p0.distance_to(p1)
+				_touch_prev_centroid = (p0 + p1) * 0.5
+		else:
+			_touch_points.erase(event.index)
+			if _touch_points.is_empty():
+				if not _touch_moved:
+					if edit_mode and placement != "select":
+						_place_at(event.position)
+					else:
+						_select_at(event.position)
+				elif _touch_mode == "object_drag" and dragging_object:
+					dragging_object = false
+					_commit_drag_edit()
+				_touch_mode = ""
+				_touch_moved = false
+			elif _touch_points.size() == 1:
+				_touch_mode = "orbit"
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventScreenDrag:
+		_is_touch_device = true
+		_touch_points[event.index] = event.position
+		if _touch_points.size() >= 2:
+			var pts := _touch_points.values()
+			var p0: Vector2 = pts[0]
+			var p1: Vector2 = pts[1]
+			var dist := p0.distance_to(p1)
+			var centroid := (p0 + p1) * 0.5
+			if _touch_prev_pinch_dist > 10.0 and dist > 10.0:
+				camera_distance = clampf(camera_distance * (_touch_prev_pinch_dist / dist), 4.5, 35.0)
+			var pan_delta := centroid - _touch_prev_centroid
+			var scale_factor := camera_distance * 0.0018
+			camera_target += (
+				-camera.global_basis.x * pan_delta.x + camera.global_basis.y * pan_delta.y
+			) * scale_factor
+			_touch_prev_pinch_dist = dist
+			_touch_prev_centroid = centroid
+			_update_camera()
+		elif _touch_points.size() == 1:
+			if not _touch_moved and event.position.distance_to(_touch_start_pos) > 8.0:
+				_touch_moved = true
+				if (
+					edit_mode and placement == "select"
+					and is_instance_valid(selected_object)
+					and _hit_sandbox_object_at(_touch_start_pos) == selected_object
+				):
+					_touch_mode = "object_drag"
+					_start_object_drag(_touch_start_pos)
+				else:
+					_touch_mode = "orbit"
+			if _touch_mode == "object_drag" and dragging_object:
+				_drag_selected_to(event.position)
+			elif _touch_mode == "orbit":
+				camera_yaw -= event.relative.x * 0.006
+				camera_pitch = clampf(camera_pitch + event.relative.y * 0.006, 0.12, 1.35)
+				_update_camera()
 		get_viewport().set_input_as_handled()
 		return
 	if (
@@ -480,12 +582,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotating_object = false
 		rotation_drag_pixels = 0.0
 		if was_editing:
-			if not _drag_undo_snapshot.is_empty():
-				var after_snap := _build_layout_data()
-				if JSON.stringify(after_snap) != JSON.stringify(_drag_undo_snapshot):
-					_record_undo_snapshot(_drag_undo_snapshot)
-				_drag_undo_snapshot = {}
-			_save_layout(true)
+			_commit_drag_edit()
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R:
 		_reset_camera()
 	elif (
@@ -540,15 +637,27 @@ func _unhandled_input(event: InputEvent) -> void:
 				_toggle_turn_direction()
 
 
+func _commit_drag_edit() -> void:
+	if not _drag_undo_snapshot.is_empty():
+		var after_snap := _build_layout_data()
+		if JSON.stringify(after_snap) != JSON.stringify(_drag_undo_snapshot):
+			_record_undo_snapshot(_drag_undo_snapshot)
+		_drag_undo_snapshot = {}
+	_save_layout(true)
+
+
 func _reset_camera() -> void:
 	camera_yaw = 0.6435
 	camera_pitch = 0.447
 	camera_distance = 19.4
 	camera_target = CAMERA_TARGET
+	_cam_top_view = false
+	if is_instance_valid(_mobile_cam_view_btn):
+		_mobile_cam_view_btn.text = "Top"
 	_update_camera()
 
 
-func _select_at(screen_position: Vector2) -> void:
+func _hit_sandbox_object_at(screen_position: Vector2) -> Node3D:
 	var origin := camera.project_ray_origin(screen_position)
 	var query := PhysicsRayQueryParameters3D.create(
 		origin,
@@ -557,14 +666,16 @@ func _select_at(screen_position: Vector2) -> void:
 	)
 	query.collide_with_areas = true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	var found: Node3D = null
 	var cursor: Node = hit.get("collider") as Node
 	while cursor != null:
 		if cursor is Node3D and cursor.is_in_group("sandbox_objects"):
-			found = cursor as Node3D
-			break
+			return cursor as Node3D
 		cursor = cursor.get_parent()
-	_set_selection(found)
+	return null
+
+
+func _select_at(screen_position: Vector2) -> void:
+	_set_selection(_hit_sandbox_object_at(screen_position))
 
 
 func _set_selection(object: Node3D) -> void:
@@ -1377,6 +1488,7 @@ func _build_ui() -> void:
 	canvas.add_child(ui_root)
 
 	var panel := PanelContainer.new()
+	top_toolbar_panel = panel
 	panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	panel.offset_left = 12
 	panel.offset_top = 10
@@ -1713,6 +1825,7 @@ func _build_ui() -> void:
 	bottom_left_bar.add_child(help_button)
 
 	var info_pill := PanelContainer.new()
+	desktop_info_pill = info_pill
 	info_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_pill.add_theme_stylebox_override(
 		"panel",
@@ -1741,6 +1854,7 @@ func _build_ui() -> void:
 	_build_transform_controls(ui_root)
 	_build_force_panel(ui_root)
 	_build_io_status_panel(ui_root)
+	_build_mobile_camera_bar(ui_root)
 	_build_cabinet_canvas_layer()
 	_sync_2d_cabinet_customization(_get_cabinet_node())
 	_build_object_dialog(ui_root)
@@ -1772,6 +1886,7 @@ func _build_io_status_panel(ui_root: Control) -> void:
 	vbox.add_child(header)
 
 	var scroll := ScrollContainer.new()
+	io_status_scroll = scroll
 	scroll.custom_minimum_size = Vector2(356, 460)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vbox.add_child(scroll)
@@ -1782,6 +1897,130 @@ func _build_io_status_panel(ui_root: Control) -> void:
 	io_status_list.add_theme_constant_override("v_separation", 4)
 	scroll.add_child(io_status_list)
 	_refresh_io_status_list()
+
+
+func _build_mobile_camera_bar(ui_root: Control) -> void:
+	mobile_cam_bar = PanelContainer.new()
+	mobile_cam_bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	mobile_cam_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	mobile_cam_bar.grow_vertical = Control.GROW_DIRECTION_END
+	mobile_cam_bar.offset_top = 114
+	mobile_cam_bar.offset_right = -12
+	mobile_cam_bar.add_theme_stylebox_override(
+		"panel",
+		_ui_stylebox(Color(0.063, 0.098, 0.137, 0.88), Color("294052"), 10, 1, 6, 4),
+	)
+	ui_root.add_child(mobile_cam_bar)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 4)
+	mobile_cam_bar.add_child(hbox)
+
+	var zoom_out_btn := Button.new()
+	zoom_out_btn.text = "-"
+	zoom_out_btn.custom_minimum_size = Vector2(36, 32)
+	zoom_out_btn.tooltip_text = "Zoom Out"
+	zoom_out_btn.pressed.connect(
+		func():
+			camera_distance = minf(35.0, camera_distance + 2.0)
+			_update_camera(),
+	)
+	hbox.add_child(zoom_out_btn)
+
+	var zoom_in_btn := Button.new()
+	zoom_in_btn.text = "+"
+	zoom_in_btn.custom_minimum_size = Vector2(36, 32)
+	zoom_in_btn.tooltip_text = "Zoom In"
+	zoom_in_btn.pressed.connect(
+		func():
+			camera_distance = maxf(4.5, camera_distance - 2.0)
+			_update_camera(),
+	)
+	hbox.add_child(zoom_in_btn)
+
+	_mobile_cam_view_btn = Button.new()
+	_mobile_cam_view_btn.text = "Top"
+	_mobile_cam_view_btn.custom_minimum_size = Vector2(36, 32)
+	_mobile_cam_view_btn.add_theme_font_size_override("font_size", 11)
+	_mobile_cam_view_btn.tooltip_text = "Toggle Top / Isometric View"
+	_mobile_cam_view_btn.pressed.connect(
+		func():
+			_cam_top_view = not _cam_top_view
+			camera_pitch = 1.32 if _cam_top_view else 0.447
+			_mobile_cam_view_btn.text = "Iso" if _cam_top_view else "Top"
+			_update_camera(),
+	)
+	hbox.add_child(_mobile_cam_view_btn)
+
+	var reset_btn := Button.new()
+	reset_btn.text = "R"
+	reset_btn.custom_minimum_size = Vector2(36, 32)
+	reset_btn.add_theme_font_size_override("font_size", 11)
+	reset_btn.tooltip_text = "Reset Camera (R)"
+	reset_btn.pressed.connect(_reset_camera)
+	hbox.add_child(reset_btn)
+
+
+func _is_compact_viewport() -> bool:
+	var vp := get_viewport().get_visible_rect().size if get_viewport() != null else Vector2(1280, 720)
+	return vp.x < 920.0 or vp.y < 520.0
+
+
+func _is_mobile_web() -> bool:
+	return OS.has_feature("web") and (DisplayServer.is_touchscreen_available() or _is_touch_device or _is_compact_viewport())
+
+
+func _fit_centered_dialog(dialog: PanelContainer, ideal_w: float, ideal_h: float) -> void:
+	if not is_instance_valid(dialog) or get_viewport() == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var w := clampf(ideal_w, 260.0, maxf(260.0, vp.x - 24.0))
+	var h := clampf(ideal_h, 220.0, maxf(220.0, vp.y - 24.0)) if ideal_h > 0.0 else 0.0
+	dialog.custom_minimum_size = Vector2(w, h)
+	dialog.offset_left = -w * 0.5
+	dialog.offset_right = w * 0.5
+	if h > 0.0:
+		dialog.offset_top = -h * 0.5
+		dialog.offset_bottom = h * 0.5
+
+
+func _update_camera_for_viewport() -> void:
+	if not is_instance_valid(camera) or get_viewport() == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	camera.fov = 56.0 if vp.x < vp.y else 45.0
+
+
+func _on_viewport_resized() -> void:
+	if get_viewport() == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var compact := _is_compact_viewport()
+	_update_camera_for_viewport()
+	if is_instance_valid(desktop_info_pill):
+		desktop_info_pill.visible = not compact and not _is_touch_device
+	var top_y := (top_toolbar_panel.offset_top + top_toolbar_panel.size.y + 8.0) if is_instance_valid(top_toolbar_panel) else 114.0
+	if is_instance_valid(mobile_cam_bar):
+		mobile_cam_bar.offset_top = maxf(64.0, top_y)
+		mobile_cam_bar.offset_right = -12.0
+		mobile_cam_bar.visible = compact or _is_touch_device or OS.has_feature("web")
+	if is_instance_valid(io_status_panel):
+		var io_w := clampf(370.0, 240.0, maxf(240.0, vp.x - 28.0))
+		io_status_panel.offset_left = 12.0
+		io_status_panel.offset_top = maxf(64.0, top_y)
+		io_status_panel.offset_right = 12.0 + io_w
+		if is_instance_valid(io_status_scroll):
+			var max_h := clampf(vp.y - io_status_panel.offset_top - 86.0, 140.0, 460.0)
+			io_status_scroll.custom_minimum_size = Vector2(maxf(200.0, io_w - 22.0), max_h)
+	_fit_centered_dialog(help_dialog, 720.0, 560.0)
+	_fit_centered_dialog(object_dialog, 640.0, 560.0)
+	_fit_centered_dialog(ladder_dialog, 680.0, 500.0)
+	_fit_centered_dialog(modbus_dialog, 560.0, 460.0)
+	_fit_centered_dialog(floor_dialog, 420.0, 0.0)
+	_fit_centered_dialog(npc_dialog, 440.0, 0.0)
+	_fit_transform_panel()
+	_fit_force_panel()
+	_update_cabinet_panel_visibility()
 
 
 func _toggle_io_status_panel() -> void:
@@ -2300,9 +2539,13 @@ func _update_cabinet_panel_visibility() -> void:
 	)
 	cabinet_panel.visible = has_selected_cabinet
 	if cabinet_panel.visible:
-		if edit_mode:
+		var vp_w := get_viewport().get_visible_rect().size.x if get_viewport() != null else 1280.0
+		if edit_mode and vp_w >= 560.0:
 			cabinet_panel.offset_left = -536
 			cabinet_panel.offset_right = -400
+		elif edit_mode:
+			cabinet_panel.offset_left = maxf(-vp_w + 12.0, -320.0)
+			cabinet_panel.offset_right = cabinet_panel.offset_left + 136.0
 		else:
 			cabinet_panel.offset_left = -240
 			cabinet_panel.offset_right = -16
@@ -2848,7 +3091,7 @@ func _refresh_io_status_list() -> void:
 		)
 		if kind == "vision_sensor" and not obj.has_meta("forced_active"):
 			var det_id := int(obj.get("detected_id"))
-			var det_name := "BOX" if det_id == 1 else ("CRATE" if det_id == 2 else "NONE")
+			var det_name := "BOX" if det_id == 1 else ("CRATE" if det_id == 2 else ("NG" if det_id == 3 else "NONE"))
 			tag = "ID:%d %s" % [det_id, det_name]
 		elif kind == "rgb_sensor" and not obj.has_meta("forced_active"):
 			var col_id := int(obj.get("detected_color_id"))
@@ -3272,12 +3515,17 @@ func _fit_force_panel() -> void:
 func _fit_bottom_right_panel(panel: PanelContainer, min_width: float) -> void:
 	if not is_instance_valid(panel):
 		return
+	var vp := get_viewport().get_visible_rect().size if get_viewport() != null else Vector2(1280.0, 720.0)
 	var min_sz := panel.get_combined_minimum_size()
-	var w := maxf(min_sz.x, min_width)
-	panel.offset_right = -16.0
-	panel.offset_left = -16.0 - w
-	panel.offset_bottom = -46.0
-	panel.offset_top = -46.0 - min_sz.y
+	var w := minf(maxf(min_sz.x, min_width), maxf(220.0, vp.x - 24.0))
+	var right_margin := 12.0 if vp.x < 920.0 else 16.0
+	var bottom_margin := 46.0
+	var max_h := maxf(140.0, vp.y - bottom_margin - 60.0)
+	var h := minf(min_sz.y, max_h)
+	panel.offset_right = -right_margin
+	panel.offset_left = -right_margin - w
+	panel.offset_bottom = -bottom_margin
+	panel.offset_top = -bottom_margin - h
 
 
 var _object_thumb_requests: Array[Dictionary] = []
@@ -5981,6 +6229,8 @@ func _build_transform_controls(ui_root: Control) -> void:
 	vision_mode_option.add_item("All Boxes", 0)
 	vision_mode_option.add_item("Cardboard (box)", 1)
 	vision_mode_option.add_item("Plastic (crate)", 2)
+	vision_mode_option.add_item("Defective (NG)", 3)
+	vision_mode_option.add_item("Good (OK)", 4)
 	vision_mode_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vision_mode_option.item_selected.connect(
 		func(idx: int):
@@ -5988,7 +6238,8 @@ func _build_transform_controls(ui_root: Control) -> void:
 				is_instance_valid(selected_object)
 				and str(selected_object.get_meta("kind", "")) == "vision_sensor"
 			):
-				selected_object.set("detect_mode", idx),
+				selected_object.set("detect_mode", idx)
+				_save_layout(true),
 	)
 	vision_mode_row.add_child(vision_mode_option)
 	rgb_mode_row = HBoxContainer.new()
@@ -6042,6 +6293,30 @@ func _build_transform_controls(ui_root: Control) -> void:
 				_save_settings(),
 	)
 	emitter_mode_row.add_child(emitter_mode_option)
+	emitter_defect_row = HBoxContainer.new()
+	emitter_defect_row.visible = false
+	column.add_child(emitter_defect_row)
+	var edefect_label := Label.new()
+	edefect_label.text = "Defect %:"
+	edefect_label.custom_minimum_size.x = 92
+	emitter_defect_row.add_child(edefect_label)
+	emitter_defect_input = SpinBox.new()
+	emitter_defect_input.min_value = 0
+	emitter_defect_input.max_value = 100
+	emitter_defect_input.step = 5
+	emitter_defect_input.suffix = "%"
+	emitter_defect_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	emitter_defect_input.value_changed.connect(
+		func(val: float):
+			if (
+				is_instance_valid(selected_object)
+				and str(selected_object.get_meta("kind", "")) == "emitter"
+			):
+				selected_object.set("defect_rate", clampi(int(round(val)), 0, 100))
+				_save_layout(true)
+				_save_settings(),
+	)
+	emitter_defect_row.add_child(emitter_defect_input)
 	cabinet_title_row = HBoxContainer.new()
 	cabinet_title_row.visible = false
 	column.add_child(cabinet_title_row)
@@ -6345,6 +6620,9 @@ func _refresh_transform_controls() -> void:
 		emitter_mode_row.visible = is_emitter
 		if is_emitter and is_instance_valid(emitter_mode_option):
 			emitter_mode_option.select(int(selected_object.get("box_mode")))
+		emitter_defect_row.visible = is_emitter
+		if is_emitter and is_instance_valid(emitter_defect_input):
+			emitter_defect_input.set_value_no_signal(int(selected_object.get("defect_rate")))
 		var is_tank: bool = kind_str == "water_tank"
 		if is_instance_valid(tank_edit_box):
 			tank_edit_box.visible = is_tank
@@ -6764,7 +7042,7 @@ func _on_conveyor_speed_changed(value: float) -> void:
 	_save_settings()
 
 
-func spawn_emitted_box(world_pos: Vector3, kind: String) -> RigidBody3D:
+func spawn_emitted_box(world_pos: Vector3, kind: String, is_defective: bool = false) -> RigidBody3D:
 	var box: RigidBody3D
 	match kind:
 		"box_plastic":
@@ -6784,7 +7062,59 @@ func spawn_emitted_box(world_pos: Vector3, kind: String) -> RigidBody3D:
 					spawn_y = maxf(spawn_y, p.global_position.y + 0.20)
 		box.position = Vector3(world_pos.x, spawn_y, world_pos.z)
 		box.freeze = (not running) and (not _has_any_forced_active())
+		if is_defective:
+			_apply_defective_visual(box, kind)
 	return box
+
+
+func _apply_defective_visual(box: RigidBody3D, kind: String) -> void:
+	box.set_meta("is_defective", true)
+	var top_y := 0.66
+	match kind:
+		"box":
+			top_y = 0.66
+		"box_plastic":
+			top_y = 0.33
+		"box_small":
+			top_y = 0.37
+		"box_metal":
+			top_y = 0.45
+		"pallet":
+			top_y = 0.17
+		"workpiece":
+			top_y = 0.23
+	for child in box.get_children():
+		if child is Node3D and not (child is CollisionShape3D):
+			(child as Node3D).scale = Vector3(1.05, 0.88, 0.94)
+			break
+	var marker := Node3D.new()
+	marker.name = "DefectMarker"
+	marker.position = Vector3(0.0, top_y, 0.0)
+	var x_mat := StandardMaterial3D.new()
+	x_mat.albedo_color = Color("e62229")
+	x_mat.emission_enabled = true
+	x_mat.emission = Color("ff3038")
+	x_mat.emission_energy_multiplier = 0.7
+	x_mat.roughness = 0.4
+	for angle in [45.0, -45.0]:
+		var bar := MeshInstance3D.new()
+		var bar_mesh := BoxMesh.new()
+		bar_mesh.size = Vector3(0.36, 0.014, 0.06)
+		bar.mesh = bar_mesh
+		bar.material_override = x_mat
+		bar.rotation_degrees.y = angle
+		marker.add_child(bar)
+	var ng_label := Label3D.new()
+	ng_label.position = Vector3(0.0, 0.22, 0.0)
+	ng_label.text = "NG"
+	ng_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	ng_label.pixel_size = 0.005
+	ng_label.font_size = 32
+	ng_label.outline_size = 6
+	ng_label.modulate = Color("ff3b3b")
+	ng_label.outline_modulate = Color(0.08, 0.02, 0.02, 0.95)
+	marker.add_child(ng_label)
+	box.add_child(marker)
 
 
 func _spawn_product_by_kind(kind: String) -> RigidBody3D:
@@ -6934,7 +7264,8 @@ func _on_sensor_body_exited(body: Node3D) -> void:
 
 func _update_sensor_indicator() -> void:
 	var active := not sensor_bodies.is_empty()
-	sensor.set_detected(active)
+	if is_instance_valid(sensor):
+		sensor.set_detected(active)
 
 
 func _toggle_conveyor() -> void:
@@ -6949,7 +7280,8 @@ func _set_running(value: bool) -> void:
 		if is_instance_valid(axis_gizmo):
 			axis_gizmo.visible = false
 	_refresh_transform_controls()
-	_apply_conveyor_speed(conveyor)
+	if is_instance_valid(conveyor):
+		_apply_conveyor_speed(conveyor)
 	for object in get_tree().get_nodes_in_group("sandbox_conveyors"):
 		if object is StaticBody3D:
 			_apply_conveyor_speed(object as StaticBody3D)
@@ -7366,7 +7698,7 @@ func _sync_modbus_io() -> void:
 			var hr_addr := int(obj.get_meta("modbus_holding_reg", -1))
 			if plc_mode and hr_addr >= 0:
 				if kind == "vision_sensor":
-					var cmd_mode := clampi(ModbusTCP.get_holding_register(hr_addr), 0, 2)
+					var cmd_mode := clampi(ModbusTCP.get_holding_register(hr_addr), 0, 4)
 					if int(obj.get("detect_mode")) != cmd_mode:
 						obj.set("detect_mode", cmd_mode)
 						if selected_object == obj and is_instance_valid(vision_mode_option):
@@ -8568,6 +8900,7 @@ func _build_layout_data() -> Dictionary:
 				entry["modbus_holding_reg"] = int(object.get_meta("modbus_holding_reg", -1))
 			elif kind == "emitter":
 				entry["box_mode"] = int(object.get("box_mode"))
+				entry["defect_rate"] = int(object.get("defect_rate"))
 			elif kind == "cabinet" and object.has_method("get_customization"):
 				entry["modbus_input_reg"] = int(object.get_meta("modbus_input_reg", -1))
 				entry["cabinet_cfg"] = object.call("get_customization")
@@ -8700,21 +9033,86 @@ func _apply_layout_data(data: Dictionary, auto_start: bool = false) -> void:
 	var new_depth := int(workspace.depth)
 	_set_selection(null)
 	_set_workspace_size(new_width, new_depth)
+	var entries: Array = []
+	for raw_entry in data.objects:
+		if raw_entry.get("base_id", "") == "base_conveyor" and int(raw_entry.get("modbus_coil", -1)) < 0:
+			var rx := float(raw_entry.x)
+			var rz := float(raw_entry.z)
+			var rh := float(raw_entry.get("height_offset", 0.0))
+			var rrot := float(raw_entry.get("rotation", 0.0))
+			var has_overlapping_conveyor := false
+			for other in data.objects:
+				if (
+					other.get("kind", "") == "conveyor"
+					and other.get("base_id", "") == ""
+					and is_equal_approx(float(other.x), rx)
+					and is_equal_approx(float(other.z), rz)
+					and is_equal_approx(float(other.get("height_offset", 0.0)), rh)
+					and is_equal_approx(float(other.get("rotation", 0.0)), rrot)
+				):
+					has_overlapping_conveyor = true
+					break
+			if has_overlapping_conveyor:
+				continue
+		entries.append(raw_entry)
+	var has_base_conveyor := false
+	var has_base_sensor := false
+	for entry in entries:
+		var base_id := str(entry.get("base_id", ""))
+		if base_id == "base_conveyor":
+			has_base_conveyor = true
+		elif base_id == "base_sensor":
+			has_base_sensor = true
 	for object in get_tree().get_nodes_in_group("sandbox_objects"):
-		if object.has_meta("base_id"):
-			continue
-		object.remove_from_group("sandbox_objects")
-		if object.get_parent() == self:
-			remove_child(object)
-		object.queue_free()
-	for entry in data.objects:
+		var obj_base_id := str(object.get_meta("base_id", ""))
+		if obj_base_id == "base_conveyor":
+			if has_base_conveyor:
+				object.set_meta("modbus_coil", -1)
+				object.set_meta("modbus_input", -1)
+				continue
+			object.remove_from_group("sandbox_objects")
+			object.remove_from_group("sandbox_conveyors")
+			if object.get_parent() == self:
+				remove_child(object)
+			object.queue_free()
+			conveyor = null
+		elif obj_base_id == "base_sensor":
+			if has_base_sensor:
+				object.set_meta("modbus_coil", -1)
+				object.set_meta("modbus_input", -1)
+				continue
+			object.remove_from_group("sandbox_objects")
+			if object.get_parent() == self:
+				remove_child(object)
+			object.queue_free()
+			sensor = null
+			sensor_indicator = null
+			sensor_indicator_material = null
+		else:
+			object.remove_from_group("sandbox_objects")
+			if object.is_in_group("sandbox_conveyors"):
+				object.remove_from_group("sandbox_conveyors")
+			if object.get_parent() == self:
+				remove_child(object)
+			object.queue_free()
+	for entry in entries:
 		var position := Vector3(float(entry.x), 0, float(entry.z))
 		var object: Node3D
 		if entry.get("base_id", "") == "base_conveyor":
+			if not is_instance_valid(conveyor):
+				conveyor = _create_sandbox_object("conveyor", position, true) as StaticBody3D
+				conveyor.name = "MainConveyor"
+				conveyor.set_meta("base_id", "base_conveyor")
 			object = conveyor
 			object.position = position + Vector3(0, EQUIPMENT_BASE_HEIGHT.conveyor, 0)
 			object.set_meta("grid_position", position)
 		elif entry.get("base_id", "") == "base_sensor":
+			if not is_instance_valid(sensor):
+				sensor = _create_sandbox_object("sensor", position, true) as Area3D
+				sensor.name = "EntrySensor"
+				sensor.set_meta("base_id", "base_sensor")
+				sensor_indicator = sensor.get_node("Indicator") as MeshInstance3D
+				sensor_indicator_material = sensor_indicator.material_override as StandardMaterial3D
 			object = sensor
 			object.position = position + Vector3(0, EQUIPMENT_BASE_HEIGHT.sensor, 0)
 			object.set_meta("grid_position", position)
@@ -8762,6 +9160,8 @@ func _apply_layout_data(data: Dictionary, auto_start: bool = false) -> void:
 			elif entry.kind == "emitter":
 				if entry.has("box_mode"):
 					object.set("box_mode", int(entry.box_mode))
+				if entry.has("defect_rate"):
+					object.set("defect_rate", clampi(int(entry.defect_rate), 0, 100))
 			elif entry.kind == "cabinet":
 				if entry.has("modbus_input_reg"):
 					object.set_meta("modbus_input_reg", int(entry.modbus_input_reg))

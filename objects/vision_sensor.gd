@@ -1,8 +1,8 @@
 extends Area3D
 
-@export_enum("All", "Cardboard", "Plastic") var detect_mode: int = 0:
+@export_enum("All", "Cardboard", "Plastic", "Defective (NG)", "Good (OK)") var detect_mode: int = 0:
 	set(value):
-		detect_mode = clampi(value, 0, 2)
+		detect_mode = clampi(value, 0, 4)
 		_recheck_overlaps()
 		_update_mode_label()
 
@@ -39,6 +39,10 @@ func _matches_mode(body: Node3D) -> bool:
 			return kind == "box"
 		2:
 			return kind == "box_plastic"
+		3:
+			return bool(body.get_meta("is_defective", false))
+		4:
+			return not bool(body.get_meta("is_defective", false))
 		_:
 			return true
 
@@ -65,6 +69,8 @@ func _on_body_exited(body: Node3D) -> void:
 func _compute_detected_id() -> int:
 	for body in _detected_bodies:
 		if is_instance_valid(body):
+			if bool(body.get_meta("is_defective", false)):
+				return 3
 			var kind := _get_body_kind(body)
 			return 2 if kind == "box_plastic" else 1
 	return 0
@@ -74,27 +80,40 @@ func set_detected(is_active: bool) -> void:
 	var changed := active != is_active or detected_id != new_id
 	active = is_active
 	detected_id = new_id
+	var ind_col := Color("28c8ff")
+	var ring_col := Color("b3f0ff")
+	var beam_col := Color(0.15, 0.78, 1.0, 0.16)
+	if active:
+		if detected_id == 3:
+			ind_col = Color("ff2e3b")
+			ring_col = Color("ffd0d0")
+			beam_col = Color(1.0, 0.18, 0.22, 0.42)
+		elif detect_mode == 4:
+			ind_col = Color("2ee878")
+			ring_col = Color("d0ffe0")
+			beam_col = Color(0.18, 0.92, 0.45, 0.36)
+		else:
+			ind_col = Color("ff3b9a")
+			ring_col = Color("ffffff")
+			beam_col = Color(1.0, 0.25, 0.65, 0.36)
 	if indicator != null:
 		var mat := indicator.material_override as StandardMaterial3D
 		if mat != null:
-			var col := Color("ff3b9a") if active else Color("28c8ff")
-			mat.albedo_color = col
+			mat.albedo_color = ind_col
 			mat.emission_enabled = true
-			mat.emission = col
+			mat.emission = ind_col
 			mat.emission_energy_multiplier = 2.6 if active else 0.9
 	if ring_light_led != null:
 		var rmat := ring_light_led.material_override as StandardMaterial3D
 		if rmat != null:
-			var rcol := Color("ffffff") if active else Color("b3f0ff")
-			rmat.albedo_color = rcol
-			rmat.emission = rcol
+			rmat.albedo_color = ring_col
+			rmat.emission = ring_col
 			rmat.emission_energy_multiplier = 3.0 if active else 1.1
 	if scan_beam != null:
 		var bmat := scan_beam.material_override as StandardMaterial3D
 		if bmat != null:
-			var bcol := Color(1.0, 0.25, 0.65, 0.36) if active else Color(0.15, 0.78, 1.0, 0.16)
-			bmat.albedo_color = bcol
-			bmat.emission = Color(bcol.r, bcol.g, bcol.b, 1.0)
+			bmat.albedo_color = beam_col
+			bmat.emission = Color(beam_col.r, beam_col.g, beam_col.b, 1.0)
 			bmat.emission_energy_multiplier = 1.6 if active else 0.5
 	if changed:
 		state_changed.emit(active)
@@ -107,5 +126,9 @@ func _update_mode_label() -> void:
 			mode_label.text = "VISION: BOX"
 		2:
 			mode_label.text = "VISION: CRATE"
+		3:
+			mode_label.text = "VISION: NG"
+		4:
+			mode_label.text = "VISION: OK"
 		_:
 			mode_label.text = "VISION: ALL"

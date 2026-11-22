@@ -6,11 +6,15 @@ const BELT_SHADER := preload("res://objects/belt_surface.gdshader")
 # เพิ่มตัวแปรปรับความเร็วใน Inspector และเรียกแก้ผ่านโค้ดได้ง่ายๆ
 @export var active: bool = false:
 	set(value):
+		if active == value:
+			return
 		active = value
 		_update_velocity()
 
 @export var speed: float = 1.8:
 	set(value):
+		if is_equal_approx(speed, value):
+			return
 		speed = value
 		_update_velocity()
 

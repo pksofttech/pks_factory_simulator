@@ -1,10 +1,10 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1795068805
-agy.txt::TextFile::-1::1795059871::0::1::::<><><>0<>0<><>::
+::res://::1795365600
+agy.txt::TextFile::-1::1795167958::0::1::::<><><>0<>0<><>::
 export_presets.cfg::TextFile::-1::1795071306::0::1::::<><><>0<>0<><>::
 loading_screen.gd::GDScript::3562646622168996223::1795066505::0::1::::<>Control<><>0<>0<><>::
 loading_screen.tscn::PackedScene::-1::1795066383::0::1::::<><><>0<>0<><>::
-main.gd::GDScript::3365663170635895031::1795071433::0::1::::<>Node3D<><>0<>0<><>::
+main.gd::GDScript::3365663170635895031::1795164011::0::1::::<>Node3D<><>0<>0<><>::
 main.tscn::PackedScene::286737175616461848::1794804114::0::1::::<><><>0<>0<><>::uid://bn7l8lxcpw4gx::::res://main.gd
 node_3d.tscn::PackedScene::3449290665353995904::1794837558::0::1::::<><><>0<>0<><>::
 README.md::TextFile::-1::1795068805::0::1::::<><><>0<>0<><>::
@@ -91,7 +91,7 @@ rubber_belt_con01.jpeg::CompressedTexture2D::4299828580359312748::1794797353::17
 rubber_belt_normal.png::CompressedTexture2D::3467245554850578168::1794797398::1794797399::1::::<><><>0<>0<>d96a8aaede019ea76c7a8530bb780209<>res://.godot/imported/rubber_belt_normal.png-124d341f7aa835631e427ed2740a363c.ctex::
 ::res://assets/emitter/::1794814568
 emitter_visual.glb::PackedScene::1692918480201283356::1794814405::1794814568::1::::<><><>0<>0<>20ff5e6278712a2f64575c21e5ca6ede<>res://.godot/imported/emitter_visual.glb-08c7583a43fe5226edf57115f60f4c04.scn::
-::res://assets/fonts/::1795071304
+::res://assets/fonts/::1795071451
 NotoSansThaiUI-Regular.ttf::FontFile::5895974630819891908::1795071304::1795071451::1::::<><><>0<>0<>05f091d792db930afbb36c38b3160bad<>res://.godot/imported/NotoSansThaiUI-Regular.ttf-04f1e7e3783403be0d2b09b984077313.fontdata::
 ::res://assets/pusher/::1794811383
 pusher_visual.glb::PackedScene::8290388638713337809::1794811381::1794811383::1::::<><><>0<>0<>961ab51f087bcf2b033b6e14c6affbd3<>res://.godot/imported/pusher_visual.glb-e8439976c3a1d1bbc4d677b8a93d10f7.scn::
@@ -122,10 +122,10 @@ cabinet.gd::GDScript::8791780627770073322::1795063404::0::1::::<>StaticBody3D<><
 cabinet.tscn::PackedScene::8260631593676659793::1795069240::0::1::::<><><>0<>0<><>::uid://dxi2lv4opb7k5::::res://objects/cabinet.gd
 control_cabinet_2d.gd::GDScript::8664933957855256305::1794998307::0::1::::<>CanvasLayer<><>0<>0<><>::
 control_cabinet_2d.tscn::PackedScene::3371808327010720535::1795013421::0::1::::<><><>0<>0<><>::uid://dvpmgw7jy8o14::::res://objects/control_cabinet_2d.gd<>uid://dpxrnpe7byq3j::::res://objects/cabinet.tscn
-conveyor.gd::GDScript::4609245977948580411::1794910220::0::1::::<>StaticBody3D<><>0<>0<><>::
+conveyor.gd::GDScript::4609245977948580411::1795162972::0::1::::<>StaticBody3D<><>0<>0<><>::
 conveyor.tscn::PackedScene::7354349512042882071::1794844909::0::1::::<><><>0<>0<><>::uid://b6w0uwwpgyg2n::::res://objects/conveyor.gd<>uid://bff68826j3a8i::::res://assets/conveyor/conveyor_visual.glb
 conveyor_short.tscn::PackedScene::-1::1794844911::0::1::::<><><>0<>0<><>::res://objects/conveyor.gd<>res://assets/conveyor/conveyor_visual.glb
-emitter.gd::GDScript::394285338647716637::1794969489::0::1::::<>StaticBody3D<><>0<>0<><>::
+emitter.gd::GDScript::394285338647716637::1795163893::0::1::::<>StaticBody3D<><>0<>0<><>::
 emitter.tscn::PackedScene::-1::1794841539::0::1::::<><><>0<>0<><>::res://objects/emitter.gd<>res://assets/emitter/emitter_visual.glb
 light_curtain.gd::GDScript::5463947998622410611::1795013474::0::1::::<>Area3D<><>0<>0<><>::
 light_curtain.tscn::PackedScene::-1::1794898524::0::1::::<><><>0<>0<><>::res://objects/light_curtain.gd
@@ -169,7 +169,7 @@ stopper.gd::GDScript::7112439464820221848::1795014061::0::1::::<>StaticBody3D<><
 stopper.tscn::PackedScene::-1::1794810598::0::1::::<><><>0<>0<><>::res://objects/stopper.gd<>res://assets/stopper/stopper_visual.glb
 tester_npc.tscn::PackedScene::-1::1794905277::0::1::::<><><>0<>0<><>::res://objects/operator_npc.gd
 turn.tscn::PackedScene::-1::1794840465::0::1::::<><><>0<>0<><>::res://turn_conveyor.gd<>res://assets/turn/turn_visual.glb
-vision_sensor.gd::GDScript::6522021714935978188::1795011024::0::1::::<>Area3D<><>0<>0<><>::
+vision_sensor.gd::GDScript::6522021714935978188::1795163899::0::1::::<>Area3D<><>0<>0<><>::
 vision_sensor.tscn::PackedScene::-1::1795011017::0::1::::<><><>0<>0<><>::res://objects/vision_sensor.gd
 water_stream.gdshader::Shader::2930495405672232580::1795004614::0::1::::<><><>0<>0<><>::
 water_tank.gd::GDScript::4460554149320018870::1795013466::0::1::::<>StaticBody3D<><>0<>0<><>::

@@ -11,6 +11,7 @@ extends StaticBody3D
 @export var plc_mode: bool = false
 @export var spawn_interval: float = 2.5
 @export_enum("Alternate", "Cardboard", "Plastic", "SmallBox", "MetalCrate", "Pallet", "Workpiece") var box_mode: int = 0
+@export_range(0, 100, 1) var defect_rate: int = 0
 
 var _cooldown := 0.0
 var _next_plastic := false
@@ -70,7 +71,8 @@ func _emit_box(scene: Node) -> void:
 		6:
 			kind = "workpiece"
 	if scene.has_method("spawn_emitted_box"):
-		scene.call("spawn_emitted_box", global_position, kind)
+		var is_defective := defect_rate > 0 and (randi() % 100) < defect_rate
+		scene.call("spawn_emitted_box", global_position, kind, is_defective)
 		var fa := get_node_or_null("/root/FactoryAudio")
 		if fa != null:
 			fa.call("play_one_shot", self, "emit", -10.0, 14.0)

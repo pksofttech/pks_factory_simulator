@@ -10,6 +10,7 @@ const TIPS := [
 	"Tip: Press R at any time to reset the camera back to the factory overview.",
 ]
 
+var _card: PanelContainer
 var _progress_bar: ProgressBar
 var _percent_label: Label
 var _status_label: Label
@@ -28,6 +29,9 @@ func _ready() -> void:
 	if DisplayServer.get_name() == "headless" or "--smoke-test" in OS.get_cmdline_user_args():
 		_min_show_time = 0.0
 	_build_ui()
+	if get_viewport() != null:
+		get_viewport().size_changed.connect(_update_card_size)
+	_update_card_size()
 	_tip_idx = randi() % TIPS.size()
 	_tip_label.text = TIPS[_tip_idx]
 	var err := ResourceLoader.load_threaded_request(TARGET_SCENE)
@@ -94,8 +98,8 @@ func _build_ui() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 
-	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(540, 260)
+	_card = PanelContainer.new()
+	_card.custom_minimum_size = Vector2(540, 260)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.13, 0.18, 0.96)
 	style.border_color = Color("2f5470")
@@ -105,12 +109,12 @@ func _build_ui() -> void:
 	style.content_margin_right = 28
 	style.content_margin_top = 24
 	style.content_margin_bottom = 24
-	card.add_theme_stylebox_override("panel", style)
-	center.add_child(card)
+	_card.add_theme_stylebox_override("panel", style)
+	center.add_child(_card)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
-	card.add_child(vbox)
+	_card.add_child(vbox)
 
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 14)
@@ -198,6 +202,13 @@ func _build_ui() -> void:
 	_tip_label.add_theme_font_size_override("font_size", 12)
 	_tip_label.add_theme_color_override("font_color", Color("d2e4ef"))
 	vbox.add_child(_tip_label)
+
+
+func _update_card_size() -> void:
+	if not is_instance_valid(_card) or get_viewport() == null:
+		return
+	var vp_w := get_viewport().get_visible_rect().size.x
+	_card.custom_minimum_size = Vector2(clampf(vp_w - 32.0, 260.0, 540.0), 240.0)
 
 
 func _load_svg_texture(path: String, svg_scale: float = 2.0) -> Texture2D:
