@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cxq737lnerxin"
 path.s3tc="res://.godot/imported/turn_visual_rubber_belt_normal.png-9604ce34fbcf6696bf09e9c012a693f6.s3tc.ctex"
+path.etc2="res://.godot/imported/turn_visual_rubber_belt_normal.png-9604ce34fbcf6696bf09e9c012a693f6.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/turn/turn_visual_rubber_belt_normal.png"
-dest_files=["res://.godot/imported/turn_visual_rubber_belt_normal.png-9604ce34fbcf6696bf09e9c012a693f6.s3tc.ctex"]
+dest_files=["res://.godot/imported/turn_visual_rubber_belt_normal.png-9604ce34fbcf6696bf09e9c012a693f6.s3tc.ctex", "res://.godot/imported/turn_visual_rubber_belt_normal.png-9604ce34fbcf6696bf09e9c012a693f6.etc2.ctex"]
 
 [params]
 

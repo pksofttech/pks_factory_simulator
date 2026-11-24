@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1v13wsrv2edm"
 path.s3tc="res://.godot/imported/conveyor_visual_rubber_belt_normal.png-e56cf6853cd3adaaca31a33f220f62df.s3tc.ctex"
+path.etc2="res://.godot/imported/conveyor_visual_rubber_belt_normal.png-e56cf6853cd3adaaca31a33f220f62df.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/conveyor/conveyor_visual_rubber_belt_normal.png"
-dest_files=["res://.godot/imported/conveyor_visual_rubber_belt_normal.png-e56cf6853cd3adaaca31a33f220f62df.s3tc.ctex"]
+dest_files=["res://.godot/imported/conveyor_visual_rubber_belt_normal.png-e56cf6853cd3adaaca31a33f220f62df.s3tc.ctex", "res://.godot/imported/conveyor_visual_rubber_belt_normal.png-e56cf6853cd3adaaca31a33f220f62df.etc2.ctex"]
 
 [params]
 

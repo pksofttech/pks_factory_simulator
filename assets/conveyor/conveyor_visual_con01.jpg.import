@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://o6b1jwgusnm6"
 path.s3tc="res://.godot/imported/conveyor_visual_con01.jpg-1959c3a447d040e8a2efab6d0c7d95c7.s3tc.ctex"
+path.etc2="res://.godot/imported/conveyor_visual_con01.jpg-1959c3a447d040e8a2efab6d0c7d95c7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/conveyor/conveyor_visual_con01.jpg"
-dest_files=["res://.godot/imported/conveyor_visual_con01.jpg-1959c3a447d040e8a2efab6d0c7d95c7.s3tc.ctex"]
+dest_files=["res://.godot/imported/conveyor_visual_con01.jpg-1959c3a447d040e8a2efab6d0c7d95c7.s3tc.ctex", "res://.godot/imported/conveyor_visual_con01.jpg-1959c3a447d040e8a2efab6d0c7d95c7.etc2.ctex"]
 
 [params]
 
